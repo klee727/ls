@@ -1,4 +1,4 @@
-package main
+package ls
 
 // option to list directories first
 // handle environment variables:  ls ${HOME}; ls $HOME
@@ -13,11 +13,7 @@ import (
 	"regexp"
 )
 
-//
-// main
-//
-func main() {
-
+func ls(output_buffer *bytes.Buffer, args []string) {
 	args_options := make([]string, 0)
 	args_files := make([]string, 0)
 	list_dirs := make([]os.FileInfo, 0)
@@ -26,7 +22,7 @@ func main() {
 	//
 	// parse arguments
 	//
-	for _, a := range os.Args[1:] {
+	for _, a := range args {
 		option, err := regexp.MatchString("^-", a)
 
 		if err != nil {
@@ -40,8 +36,6 @@ func main() {
 			args_files = append(args_files, a)
 		}
 	}
-
-	var output_buffer bytes.Buffer
 
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
@@ -122,6 +116,15 @@ func main() {
 		fmt.Printf("nothing to list?\n")
 		os.Exit(1)
 	}
+}
+
+//
+// main
+//
+func main() {
+	var output_buffer bytes.Buffer
+
+	ls(&output_buffer, os.Args[1:])
 
 	fmt.Printf("%s\n", output_buffer.String())
 }
