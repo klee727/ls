@@ -1,4 +1,4 @@
-package ls
+package main
 
 // option to list directories first
 // handle environment variables:  ls ${HOME}; ls $HOME
@@ -11,7 +11,13 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+    "strings"
 )
+
+func is_dot_name( info os.FileInfo ) bool {
+    info_name_rune := []rune(info.Name())
+    return (info_name_rune[0] == rune('.'))
+}
 
 func ls(output_buffer *bytes.Buffer, args []string) {
 	args_options := make([]string, 0)
@@ -36,6 +42,16 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			args_files = append(args_files, a)
 		}
 	}
+
+    //
+    // parse options
+    //
+    option_all := false
+    for _, o := range args_options {
+        if strings.Contains(o, "a") {
+            option_all = true
+        }
+    }
 
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
@@ -92,9 +108,15 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			}
 
 			for _, _f := range files_in_dir {
+                if is_dot_name( _f ) && !option_all {
+                    continue
+                }
+
 				output_buffer.WriteString(_f.Name() + " ")
 			}
-			output_buffer.Truncate(output_buffer.Len() - 1)
+            if output_buffer.Len() > 0 {
+			    output_buffer.Truncate(output_buffer.Len() - 1)
+            }
 			output_buffer.WriteString("\n\n")
 		}
 		output_buffer.Truncate(output_buffer.Len() - 2)
@@ -108,14 +130,22 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			}
 
 			for _, _f := range files_in_dir {
+                if is_dot_name( _f ) && !option_all {
+                    continue
+                }
+
 				output_buffer.WriteString(_f.Name() + " ")
 			}
-			output_buffer.Truncate(output_buffer.Len() - 1)
+            if output_buffer.Len() > 0 {
+			    output_buffer.Truncate(output_buffer.Len() - 1)
+            }
 		}
 	} else {
 		fmt.Printf("nothing to list?\n")
 		os.Exit(1)
 	}
+
+    //fmt.Printf("output_buffer.String() = |%s|\n", output_buffer.String())
 }
 
 //

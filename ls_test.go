@@ -1,4 +1,4 @@
-package ls
+package main
 
 import (
 	"bytes"
@@ -84,8 +84,10 @@ func TestMain(m *testing.M) {
 func TestNoArgsFiles(t *testing.T) {
 	_cd(test_root)
 
-	_mkdir("NoArgs")
-	_cd("NoArgs")
+    dir := "NoArgsFiles"
+
+	_mkdir(dir)
+	_cd(dir)
 	_mkfile("a")
 	_mkfile("b")
 	_mkfile("c")
@@ -95,6 +97,31 @@ func TestNoArgsFiles(t *testing.T) {
 	ls(&output_buffer, args)
 
 	expected := "a b c"
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
+
+func TestNoArgsDotFiles(t *testing.T) {
+  	_cd(test_root)
+
+    dir := "NoArgsDotFiles"
+
+	_mkdir(dir)
+	_cd(dir)
+	_mkfile(".a")
+	_mkfile(".b")
+	_mkfile(".c")
+
+	var output_buffer bytes.Buffer
+	var args []string
+	ls(&output_buffer, args)
+
+	expected := ""
 
 	if output_buffer.String() != expected {
 		t.Logf("expected \"%s\", but got \"%s\"\n",
