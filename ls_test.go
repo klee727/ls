@@ -84,7 +84,7 @@ func TestMain(m *testing.M) {
 func TestNoArgsFiles(t *testing.T) {
 	_cd(test_root)
 
-    dir := "NoArgsFiles"
+	dir := "NoArgsFiles"
 
 	_mkdir(dir)
 	_cd(dir)
@@ -107,9 +107,9 @@ func TestNoArgsFiles(t *testing.T) {
 }
 
 func TestNoArgsDotFiles(t *testing.T) {
-  	_cd(test_root)
+	_cd(test_root)
 
-    dir := "NoArgsDotFiles"
+	dir := "NoArgsDotFiles"
 
 	_mkdir(dir)
 	_cd(dir)
