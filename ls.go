@@ -53,6 +53,11 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 	}
 
+	// if option_all and nothing else, add '.' and '..'
+	if option_all && len(args_files) == 0 {
+		output_buffer.WriteString(". .. ")
+	}
+
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
 		this_dir, _ := os.Lstat(".")

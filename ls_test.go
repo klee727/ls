@@ -130,3 +130,77 @@ func TestNoArgsDotFiles(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestNoArgsDotFilesInDir(t *testing.T) {
+	_cd(test_root)
+
+	dir := "NoArgsDotFilesInDir"
+	dir2 := "dir"
+
+	_mkdir(dir)
+	_cd(dir)
+	_mkdir(dir2)
+	_mkfile(dir2 + "/.a")
+	_mkfile(dir2 + "/.b")
+	_mkfile(dir2 + "/.c")
+
+	var output_buffer bytes.Buffer
+	var args []string
+	args = append(args, dir2)
+	ls(&output_buffer, args)
+
+	expected := ""
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
+
+func TestAllDotFiles(t *testing.T) {
+	_cd(test_root)
+
+	dir := "NoArgsDotFiles"
+
+	_mkdir(dir)
+	_cd(dir)
+	_mkfile(".a")
+	_mkfile(".b")
+	_mkfile(".c")
+
+	var output_buffer bytes.Buffer
+	var args []string
+	args = append(args, "-a")
+	ls(&output_buffer, args)
+
+	expected := ". .. .a .b .c"
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
+
+//  markmini:ls mark$ ls -a ..
+//  .          ..         hello      ls         stringutil web
+//  markmini:ls mark$ $GOPATH/bin/ls -a ..
+//  hello ls stringutil web
+
+// markmini:ls mark$ ls -a .. .git
+// ..:
+// .          ..         hello      ls         stringutil web
+//
+// .git:
+// .              HEAD           description    info           refs
+// ..             branches       hooks          logs
+// COMMIT_EDITMSG config         index          objects
+// markmini:ls mark$ $GOPATH/bin/ls -a .. .git
+// ..:
+// hello ls stringutil web
+//
+// .git:
+// COMMIT_EDITMSG HEAD branches config description hooks index info logs objects refs
