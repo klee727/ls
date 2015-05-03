@@ -81,7 +81,7 @@ func TestMain(m *testing.M) {
 	os.Exit(result)
 }
 
-func TestNoArgsFiles(t *testing.T) {
+func Test_NoArgsFiles(t *testing.T) {
 	_cd(test_root)
 
 	dir := "NoArgsFiles"
@@ -106,7 +106,7 @@ func TestNoArgsFiles(t *testing.T) {
 	}
 }
 
-func TestNoArgsDotFiles(t *testing.T) {
+func Test_NoArgsDotFiles(t *testing.T) {
 	_cd(test_root)
 
 	dir := "NoArgsDotFiles"
@@ -131,7 +131,7 @@ func TestNoArgsDotFiles(t *testing.T) {
 	}
 }
 
-func TestNoArgsDotFilesInDir(t *testing.T) {
+func Test_NoArgsDotFilesInDir(t *testing.T) {
 	_cd(test_root)
 
 	dir := "NoArgsDotFilesInDir"
@@ -159,10 +159,10 @@ func TestNoArgsDotFilesInDir(t *testing.T) {
 	}
 }
 
-func TestAllDotFiles(t *testing.T) {
+func Test_AllDotFiles(t *testing.T) {
 	_cd(test_root)
 
-	dir := "NoArgsDotFiles"
+	dir := "AllDotFiles"
 
 	_mkdir(dir)
 	_cd(dir)
@@ -185,10 +185,33 @@ func TestAllDotFiles(t *testing.T) {
 	}
 }
 
-//  markmini:ls mark$ ls -a ..
-//  .          ..         hello      ls         stringutil web
-//  markmini:ls mark$ $GOPATH/bin/ls -a ..
-//  hello ls stringutil web
+func Test_AllUpDir(t *testing.T) {
+	_cd(test_root)
+
+	dir := "AllUpDir"
+	dir2 := "AllUpDir2"
+
+	_mkdir(dir)
+	_cd(dir)
+	_mkfile(".a")
+	_mkfile(".b")
+	_mkfile(".c")
+	_mkdir(dir2)
+	_cd(dir2)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-a", ".."}
+	ls(&output_buffer, args)
+
+	expected := ". .. .a .b .c AllUpDir2"
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
 
 // markmini:ls mark$ ls -a .. .git
 // ..:
@@ -204,3 +227,8 @@ func TestAllDotFiles(t *testing.T) {
 //
 // .git:
 // COMMIT_EDITMSG HEAD branches config description hooks index info logs objects refs
+
+// markmini:ls mark$ ls -a ls.go
+// ls.go
+// markmini:ls mark$ $GOPATH/bin/ls -a ls.go
+// nothing to list?

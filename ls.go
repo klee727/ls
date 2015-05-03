@@ -48,11 +48,6 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 	}
 
-	// if option_all and nothing else, add '.' and '..'
-	if option_all && len(args_files) == 0 {
-		output_buffer.WriteString(". .. ")
-	}
-
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
 		this_dir, _ := os.Lstat(".")
@@ -101,6 +96,11 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		for _, d := range list_dirs {
 			output_buffer.WriteString(d.Name() + ":\n")
 
+			// add '. .. ' to the output if -a is used
+			if option_all {
+				output_buffer.WriteString(". .. ")
+			}
+
 			files_in_dir, err := ioutil.ReadDir(d.Name())
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
@@ -122,11 +122,16 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		output_buffer.Truncate(output_buffer.Len() - 2)
 	} else if num_dirs == 1 {
 		for _, d := range list_dirs {
-
 			files_in_dir, err := ioutil.ReadDir(d.Name())
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				os.Exit(1)
+			}
+
+			// add '. .. ' to the output if -a is used
+			if option_all {
+				output_buffer.WriteString(". .. ")
+				//added_dots = true
 			}
 
 			for _, _f := range files_in_dir {
