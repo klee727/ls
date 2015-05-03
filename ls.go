@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
 	"strings"
 )
 
@@ -29,12 +28,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	// parse arguments
 	//
 	for _, a := range args {
-		option, err := regexp.MatchString("^-", a)
-
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			os.Exit(1)
-		} else if option {
+		a_rune := []rune(a)
+		if a_rune[0] == '-' {
 			// add to the options list
 			args_options = append(args_options, a)
 		} else {
