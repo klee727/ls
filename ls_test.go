@@ -213,6 +213,29 @@ func Test_AllUpDir(t *testing.T) {
 	}
 }
 
+func Test_OneFile(t *testing.T) {
+	_cd(test_root)
+
+	dir := "OneFile"
+
+	_mkdir(dir)
+	_cd(dir)
+	_mkfile("a")
+
+	var output_buffer bytes.Buffer
+	args := []string{"a"}
+	ls(&output_buffer, args)
+
+	expected := "a"
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
+
 // markmini:ls mark$ ls -a .. .git
 // ..:
 // .          ..         hello      ls         stringutil web
@@ -227,8 +250,3 @@ func Test_AllUpDir(t *testing.T) {
 //
 // .git:
 // COMMIT_EDITMSG HEAD branches config description hooks index info logs objects refs
-
-// markmini:ls mark$ ls -a ls.go
-// ls.go
-// markmini:ls mark$ $GOPATH/bin/ls -a ls.go
-// nothing to list?

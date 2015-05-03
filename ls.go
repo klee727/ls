@@ -83,6 +83,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			output_buffer.WriteString(f.Name())
 			output_buffer.WriteString(" ")
 		}
+		output_buffer.Truncate(output_buffer.Len() - 1)
 	}
 
 	//
@@ -145,9 +146,6 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 				output_buffer.Truncate(output_buffer.Len() - 1)
 			}
 		}
-	} else {
-		fmt.Printf("nothing to list?\n")
-		os.Exit(1)
 	}
 
 	//fmt.Printf("output_buffer.String() = |%s|\n", output_buffer.String())
