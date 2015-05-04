@@ -213,6 +213,51 @@ func Test_AllUpDir(t *testing.T) {
 	}
 }
 
+func Test_AllUpDir2(t *testing.T) {
+	_cd(test_root)
+
+	dir := "AllUpDir2"
+	dir2 := "AllUpDir2_1"
+	dir3 := "AllUpDir2_2"
+
+	_mkdir(dir)
+	_cd(dir)
+	_mkfile(".a")
+	_mkfile(".b")
+	_mkfile(".c")
+	_mkdir(dir2)
+	_cd(dir2)
+	_mkfile(".e")
+	_mkfile(".f")
+	_mkfile(".g")
+	_mkdir(dir3)
+	_cd(dir3)
+	_mkfile(".h")
+	_mkfile(".i")
+	_mkfile(".j")
+	_cd("..")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-a", ".", "..", dir3}
+	ls(&output_buffer, args)
+
+	expected := ".:\n" +
+		". .. .e .f .g AllUpDir2_2\n" +
+		"\n" +
+		"..:\n" +
+		". .. .a .b .c AllUpDir2_1\n" +
+		"\n" +
+		"AllUpDir2_2:\n" +
+		". .. .h .i .j"
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
+
 func Test_OneFile(t *testing.T) {
 	_cd(test_root)
 
@@ -235,18 +280,3 @@ func Test_OneFile(t *testing.T) {
 		t.Fail()
 	}
 }
-
-// markmini:ls mark$ ls -a .. .git
-// ..:
-// .          ..         hello      ls         stringutil web
-//
-// .git:
-// .              HEAD           description    info           refs
-// ..             branches       hooks          logs
-// COMMIT_EDITMSG config         index          objects
-// markmini:ls mark$ $GOPATH/bin/ls -a .. .git
-// ..:
-// hello ls stringutil web
-//
-// .git:
-// COMMIT_EDITMSG HEAD branches config description hooks index info logs objects refs
