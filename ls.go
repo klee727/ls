@@ -11,11 +11,37 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 )
 
 func is_dot_name(info os.FileInfo) bool {
 	info_name_rune := []rune(info.Name())
 	return (info_name_rune[0] == rune('.'))
+}
+
+func add_to_output(output_buffer *bytes.Buffer, long bool, info os.FileInfo) {
+	if long {
+		var long_buffer bytes.Buffer
+		// permissions string
+		long_buffer.WriteString(info.Mode().String())
+		long_buffer.WriteString(" ")
+
+		// number of hard links
+		sys := info.Sys()
+		if sys != nil {
+			stat, ok := sys.(*syscall.Stat_t)
+			if ok {
+				num_hard_links := uint64(stat.Nlink)
+				str_hard_links := fmt.Sprintf("%2d ", num_hard_links)
+				long_buffer.WriteString(str_hard_links)
+			}
+		}
+
+		output_buffer.WriteString(long_buffer.String() + "\n")
+	} else {
+		output_buffer.WriteString(info.Name())
+		output_buffer.WriteString(" ")
+	}
 }
 
 func ls(output_buffer *bytes.Buffer, args []string) {
@@ -42,15 +68,19 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	// parse options
 	//
 	option_all := false
+	option_long := false
 	for _, o := range args_options {
 		if strings.Contains(o, "a") {
 			option_all = true
+		} else if strings.Contains(o, "l") {
+			option_long = true
 		}
 	}
 
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
-		this_dir, _ := os.Lstat(".")
+		//this_dir, _ := os.Lstat(".")
+		this_dir, _ := os.Stat(".")
 		list_dirs = append(list_dirs, this_dir)
 	}
 
@@ -58,7 +88,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	// separate the files from the directories
 	//
 	for _, f := range args_files {
-		info, err := os.Lstat(f)
+		info, err := os.Stat(f)
 
 		if err != nil {
 			fmt.Printf("error: %v\n", err)
@@ -80,8 +110,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	//
 	if num_files > 0 {
 		for _, f := range list_files {
-			output_buffer.WriteString(f.Name())
-			output_buffer.WriteString(" ")
+			add_to_output(output_buffer, option_long, f)
 		}
 		output_buffer.Truncate(output_buffer.Len() - 1)
 	}
@@ -98,7 +127,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			output_buffer.WriteString(d.Name() + ":\n")
 
 			// add '. .. ' to the output if -a is used
-			if option_all {
+			if option_all && !option_long {
 				output_buffer.WriteString(". .. ")
 			}
 
@@ -113,7 +142,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 					continue
 				}
 
-				output_buffer.WriteString(_f.Name() + " ")
+				//output_buffer.WriteString(_f.Name() + " ")
+				add_to_output(output_buffer, option_long, _f)
 			}
 			if output_buffer.Len() > 0 {
 				output_buffer.Truncate(output_buffer.Len() - 1)
@@ -140,7 +170,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 					continue
 				}
 
-				output_buffer.WriteString(_f.Name() + " ")
+				//output_buffer.WriteString(_f.Name() + " ")
+				add_to_output(output_buffer, option_long, _f)
 			}
 			if output_buffer.Len() > 0 {
 				output_buffer.Truncate(output_buffer.Len() - 1)
