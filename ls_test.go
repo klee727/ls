@@ -152,7 +152,8 @@ func Test_NoArgsDotFilesInDir(t *testing.T) {
 	expected := ""
 
 	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
+		//t.Logf("expected \"%s\", but got \"%s\"\n",
+		t.Logf("expected: \n\n%s\n\nbut got: \n\n%s\n\n",
 			expected,
 			output_buffer.String())
 		t.Fail()
@@ -251,7 +252,8 @@ func Test_AllUpDir2(t *testing.T) {
 		". .. .h .i .j"
 
 	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
+		//t.Logf("expected \"%s\", but got \"%s\"\n",
+		t.Logf("expected: \n\n%s\n\nbut got: \n\n%s\n\n",
 			expected,
 			output_buffer.String())
 		t.Fail()
