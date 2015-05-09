@@ -200,10 +200,6 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			output_buffer.Truncate(output_buffer.Len() - 1)
 		}
 	} else {
-		if option_all {
-			output_buffer.WriteString(". .. ")
-		}
-
 		for _, l := range listings {
 			output_buffer.WriteString(l.name)
 			output_buffer.WriteString(" ")
@@ -286,6 +282,25 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 	}
 
+	//
+	// go ahead and create listings for '.' and '..' incase they are needed
+	//
+	info_dot, err := os.Stat(".")
+	if err != nil {
+		fmt.Printf("error: cannot stat \".\"\n")
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+	listing_dot := create_listing(info_dot, group_map)
+
+	info_dotdot, err := os.Stat("..")
+	if err != nil {
+		fmt.Printf("error: cannot stat \"..\"\n")
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+	listing_dotdot := create_listing(info_dotdot, group_map)
+
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
 		//this_dir, _ := os.Lstat(".")
@@ -340,6 +355,11 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		for _, d := range list_dirs {
 			output_buffer.WriteString(d.Name() + ":\n")
 
+			if option_all {
+				listings = append(listings, listing_dot)
+				listings = append(listings, listing_dotdot)
+			}
+
 			files_in_dir, err := ioutil.ReadDir(d.Name())
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
@@ -364,6 +384,10 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 		output_buffer.Truncate(output_buffer.Len() - 2)
 	} else if num_dirs == 1 {
+		if option_all {
+			listings = append(listings, listing_dot)
+			listings = append(listings, listing_dotdot)
+		}
 		for _, d := range list_dirs {
 			files_in_dir, err := ioutil.ReadDir(d.Name())
 			if err != nil {
@@ -397,3 +421,5 @@ func main() {
 
 	fmt.Printf("%s\n", output_buffer.String())
 }
+
+// vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
