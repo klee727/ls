@@ -13,6 +13,14 @@ import (
 	"time"
 )
 
+// this a FileInfo paired with the original path as passed in to the program
+// unfortunately, the Name() in FileInfo is only the basename, so the associated
+// path must be manually recorded as well
+type FileInfoPath struct {
+	path string
+	info os.FileInfo
+}
+
 type Listing struct {
 	permissions    string
 	num_hard_links string
@@ -30,14 +38,14 @@ func is_dot_name(info os.FileInfo) bool {
 	return (info_name_rune[0] == rune('.'))
 }
 
-func create_listing(info os.FileInfo, group_map map[int]string) Listing {
+func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 
 	var current_listing Listing
 
 	// permissions string
-	current_listing.permissions = info.Mode().String()
+	current_listing.permissions = fip.info.Mode().String()
 
-	sys := info.Sys()
+	sys := fip.info.Sys()
 	if sys == nil {
 		fmt.Printf("error:  sys is nil\n")
 		os.Exit(1)
@@ -66,13 +74,13 @@ func create_listing(info os.FileInfo, group_map map[int]string) Listing {
 	current_listing.group = group_map[int(stat.Gid)]
 
 	// size
-	current_listing.size = fmt.Sprintf("%d", info.Size())
+	current_listing.size = fmt.Sprintf("%d", fip.info.Size())
 
 	// month
-	current_listing.month = info.ModTime().Month().String()[0:3]
+	current_listing.month = fip.info.ModTime().Month().String()[0:3]
 
 	// day
-	current_listing.day = fmt.Sprintf("%02d", info.ModTime().Day())
+	current_listing.day = fmt.Sprintf("%02d", fip.info.ModTime().Day())
 
 	// time
 	// if older than a year, print the year -- TODO:  revisit this
@@ -81,20 +89,20 @@ func create_listing(info os.FileInfo, group_map map[int]string) Listing {
 	epoch_now := time.Now().Unix()
 	var seconds_in_a_year int64 = 365 * 24 * 60 * 60
 	epoch_a_year_ago := epoch_now - seconds_in_a_year
-	epoch_modified := info.ModTime().Unix()
+	epoch_modified := fip.info.ModTime().Unix()
 
 	var time_str string
 	if epoch_modified <= epoch_a_year_ago {
-		time_str = fmt.Sprintf("%d", info.ModTime().Year())
+		time_str = fmt.Sprintf("%d", fip.info.ModTime().Year())
 	} else {
 		time_str = fmt.Sprintf("%02d:%02d",
-			info.ModTime().Hour(),
-			info.ModTime().Minute())
+			fip.info.ModTime().Hour(),
+			fip.info.ModTime().Minute())
 	}
 
 	current_listing.time = time_str
 
-	current_listing.name = info.Name()
+	current_listing.name = fip.path
 
 	return current_listing
 }
@@ -213,8 +221,8 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 func ls(output_buffer *bytes.Buffer, args []string) {
 	args_options := make([]string, 0)
 	args_files := make([]string, 0)
-	list_dirs := make([]os.FileInfo, 0)
-	list_files := make([]os.FileInfo, 0)
+	list_dirs := make([]FileInfoPath, 0)
+	list_files := make([]FileInfoPath, 0)
 
 	listings := make([]Listing, 0)
 
@@ -291,7 +299,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	listing_dot := create_listing(info_dot, group_map)
+	listing_dot := create_listing(FileInfoPath{".", info_dot}, group_map)
 
 	info_dotdot, err := os.Stat("..")
 	if err != nil {
@@ -299,13 +307,13 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	listing_dotdot := create_listing(info_dotdot, group_map)
+	listing_dotdot := create_listing(FileInfoPath{"..", info_dotdot}, group_map)
 
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
 		//this_dir, _ := os.Lstat(".")
 		this_dir, _ := os.Stat(".")
-		list_dirs = append(list_dirs, this_dir)
+		list_dirs = append(list_dirs, FileInfoPath{".", this_dir})
 	}
 
 	//
@@ -320,9 +328,9 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 
 		if info.IsDir() {
-			list_dirs = append(list_dirs, info)
+			list_dirs = append(list_dirs, FileInfoPath{f, info})
 		} else {
-			list_files = append(list_files, info)
+			list_files = append(list_files, FileInfoPath{f, info})
 		}
 	}
 
@@ -353,14 +361,14 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 
 		for _, d := range list_dirs {
-			output_buffer.WriteString(d.Name() + ":\n")
+			output_buffer.WriteString(d.path + ":\n")
 
 			if option_all {
 				listings = append(listings, listing_dot)
 				listings = append(listings, listing_dotdot)
 			}
 
-			files_in_dir, err := ioutil.ReadDir(d.Name())
+			files_in_dir, err := ioutil.ReadDir(d.path)
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				os.Exit(1)
@@ -371,7 +379,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 					continue
 				}
 
-				l := create_listing(_f, group_map)
+				l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
 				listings = append(listings, l)
 			}
 
@@ -389,7 +397,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			listings = append(listings, listing_dotdot)
 		}
 		for _, d := range list_dirs {
-			files_in_dir, err := ioutil.ReadDir(d.Name())
+			files_in_dir, err := ioutil.ReadDir(d.path)
 			if err != nil {
 				fmt.Printf("error: %v\n", err)
 				os.Exit(1)
@@ -400,7 +408,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 					continue
 				}
 
-				l := create_listing(_f, group_map)
+				l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
 				listings = append(listings, l)
 			}
 			write_listings_to_buffer(output_buffer,
@@ -422,4 +430,4 @@ func main() {
 	fmt.Printf("%s\n", output_buffer.String())
 }
 
-// vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
+// vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80

@@ -283,4 +283,4 @@ func Test_OneFile(t *testing.T) {
 	}
 }
 
-// vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab
+// vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
