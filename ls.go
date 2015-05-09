@@ -30,17 +30,6 @@ func is_dot_name(info os.FileInfo) bool {
 	return (info_name_rune[0] == rune('.'))
 }
 
-func gid_string_to_int(gid_str string) int {
-	gid_num, err := strconv.ParseInt(gid_str, 10, 0)
-	if err != nil {
-		fmt.Printf("error:  couldn't convert %s to int\n", gid_str)
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-
-	return int(gid_num)
-}
-
 func create_listing(info os.FileInfo, group_map map[int]string) Listing {
 
 	var current_listing Listing
@@ -74,8 +63,7 @@ func create_listing(info os.FileInfo, group_map map[int]string) Listing {
 	current_listing.owner = owner.Username
 
 	// group
-	gid := gid_string_to_int(owner.Gid)
-	current_listing.group = group_map[gid]
+	current_listing.group = group_map[int(stat.Gid)]
 
 	// size
 	current_listing.size = fmt.Sprintf("%d", info.Size())
@@ -259,7 +247,12 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 
 		line_split := strings.Split(line, ":")
 
-		gid := gid_string_to_int(line_split[2])
+		gid, err := strconv.ParseInt(line_split[2], 10, 0)
+		if err != nil {
+			fmt.Printf("error:  couldn't convert %s to int\n", line_split[2])
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
 		group_name := line_split[0]
 		group_map[int(gid)] = group_name
 	}
