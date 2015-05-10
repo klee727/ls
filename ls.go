@@ -87,12 +87,12 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 	// otherwise, print hour:minute
 
 	epoch_now := time.Now().Unix()
-	var seconds_in_a_year int64 = 365 * 24 * 60 * 60
-	epoch_a_year_ago := epoch_now - seconds_in_a_year
+	var seconds_in_six_months int64 = 182 * 24 * 60 * 60
+	epoch_six_months_ago := epoch_now - seconds_in_six_months
 	epoch_modified := fip.info.ModTime().Unix()
 
 	var time_str string
-	if epoch_modified <= epoch_a_year_ago {
+	if epoch_modified <= epoch_six_months_ago || epoch_modified > epoch_now {
 		time_str = fmt.Sprintf("%d", fip.info.ModTime().Year())
 	} else {
 		time_str = fmt.Sprintf("%02d:%02d",
@@ -285,7 +285,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	for _, o := range args_options {
 		if strings.Contains(o, "a") {
 			option_all = true
-		} 
+		}
 		if strings.Contains(o, "l") {
 			option_long = true
 		}
