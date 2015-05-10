@@ -285,7 +285,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	for _, o := range args_options {
 		if strings.Contains(o, "a") {
 			option_all = true
-		} else if strings.Contains(o, "l") {
+		} 
+		if strings.Contains(o, "l") {
 			option_long = true
 		}
 	}
