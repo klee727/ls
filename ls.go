@@ -92,7 +92,8 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 	epoch_modified := fip.info.ModTime().Unix()
 
 	var time_str string
-	if epoch_modified <= epoch_six_months_ago || epoch_modified > epoch_now {
+	if epoch_modified <= epoch_six_months_ago ||
+		epoch_modified >= (epoch_now+5) {
 		time_str = fmt.Sprintf("%d", fip.info.ModTime().Year())
 	} else {
 		time_str = fmt.Sprintf("%02d:%02d",
