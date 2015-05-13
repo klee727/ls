@@ -1,15 +1,22 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
+	"os/user"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 )
 
 const (
 	test_root = "/tmp/ls_test"
 )
+
+var group_map map[int]string
 
 func _cd(path string) {
 	err := os.Chdir(path)
@@ -47,14 +54,121 @@ func _mkfile(path string) {
 	}
 }
 
+func _mkfile2(path string,
+	//num_hard_links int,
+	mode os.FileMode,
+	uid int,
+	gid int,
+	size_bytes int,
+	mod_epoch_s time.Time) {
+
+	f, err := os.Create(path)
+	if err != nil {
+		fmt.Printf("error: os.Create(%s)\n", path)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+
+	err = os.Chmod(path, mode)
+	if err != nil {
+		fmt.Printf("error: os.Chmod(%s, %d)\n", path, mode)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+
+	err = os.Chown(path, uid, gid)
+	if err != nil {
+		fmt.Printf("error: os.Chmod(%s, %d)\n", path, mode)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+
+	writer := bufio.NewWriter(f)
+	for i := 0; i < size_bytes; i++ {
+		_, err := writer.WriteString(" ")
+		if err != nil {
+			fmt.Printf("error: writer.WriteString(\" \")\n")
+			fmt.Printf("\t%v\n", err)
+			os.Exit(1)
+		}
+	}
+	err = writer.Flush()
+	if err != nil {
+		fmt.Printf("error: writer.Flush()\n")
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+
+	err = os.Chtimes(path, mod_epoch_s, mod_epoch_s)
+	if err != nil {
+		fmt.Printf("error: os.Chtimes(%s, %v, %v)\n", path, mod_epoch_s,
+			mod_epoch_s)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+}
+
+func clean_output_buffer(buffer bytes.Buffer) string {
+	output := strings.TrimSpace(buffer.String())
+	output_clean := make([]uint8, 0)
+
+	prev_space := false
+	for i := 0; i < len(output); i++ {
+		if output[i] == ' ' && !prev_space {
+			prev_space = true
+			output_clean = append(output_clean, output[i])
+		} else if output[i] == ' ' && prev_space {
+			continue
+		} else {
+			prev_space = false
+			output_clean = append(output_clean, output[i])
+		}
+	}
+
+	return string(output_clean)
+}
+
 func TestMain(m *testing.M) {
 
 	//
 	// setup
 	//
 
+	// read in all the information from /etc/groups
+	group_map = make(map[int]string)
+
+	group_file, err := os.Open("/etc/group")
+	if err != nil {
+		fmt.Printf("error:  couldn't open /etc/group for reading\n")
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+
+	reader := bufio.NewReader(group_file)
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.Trim(line, " \t")
+
+		if line[0] == '#' || line == "" {
+			continue
+		}
+
+		line_split := strings.Split(line, ":")
+
+		gid, err := strconv.ParseInt(line_split[2], 10, 0)
+		if err != nil {
+			fmt.Printf("error:  couldn't convert %s to int\n", line_split[2])
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		group_name := line_split[0]
+		group_map[int(gid)] = group_name
+	}
+
 	// create the test root directory if it does not exist
-	_, err := os.Stat(test_root)
+	_, err = os.Stat(test_root)
 	if err != nil && os.IsNotExist(err) {
 		_mkdir(test_root)
 	} else if err != nil {
@@ -279,6 +393,50 @@ func Test_OneFile(t *testing.T) {
 		t.Logf("expected \"%s\", but got \"%s\"\n",
 			expected,
 			output_buffer.String())
+		t.Fail()
+	}
+}
+
+func Test_LL_OneFile(t *testing.T) {
+	_cd(test_root)
+
+	dir := "LL_OneFile"
+
+	_mkdir(dir)
+	_cd(dir)
+
+	time_now := time.Now()
+	size := 13
+	path := "a"
+	_mkfile2(path, 0600, os.Getuid(), os.Getgid(), size, time_now)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-l", "a"}
+	ls(&output_buffer, args)
+
+	output := clean_output_buffer(output_buffer)
+
+	owner, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		fmt.Printf("error: user.LookupId(%d)\n", os.Getuid())
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+
+	group := group_map[os.Getgid()]
+
+	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %d %d:%d %s",
+		owner.Username,
+		group,
+		size,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		path)
+
+	if output != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n", expected, output)
 		t.Fail()
 	}
 }
