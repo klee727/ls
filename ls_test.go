@@ -441,4 +441,32 @@ func Test_LL_OneFile(t *testing.T) {
 	}
 }
 
+func Test_option1(t *testing.T) {
+	_cd(test_root)
+
+	dir := "option1"
+
+	_mkdir(dir)
+	_cd(dir)
+
+	_mkfile("a")
+	_mkfile("b")
+	_mkfile("c")
+	_mkfile("d")
+	_mkfile("e")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-1"}
+	ls(&output_buffer, args)
+
+	expected := "a\nb\nc\nd\ne"
+
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+}
+
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80

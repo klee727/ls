@@ -110,8 +110,8 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 
 func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	listings []Listing,
-	option_all bool,
-	option_long bool) {
+	option_long bool,
+	option_one bool) {
 
 	if option_long {
 		var (
@@ -209,9 +209,17 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			output_buffer.Truncate(output_buffer.Len() - 1)
 		}
 	} else {
+
+		var separator string
+		if option_one {
+			separator = "\n"
+		} else {
+			separator = " "
+		}
+
 		for _, l := range listings {
 			output_buffer.WriteString(l.name)
-			output_buffer.WriteString(" ")
+			output_buffer.WriteString(separator)
 		}
 		if output_buffer.Len() > 0 {
 			output_buffer.Truncate(output_buffer.Len() - 1)
@@ -283,12 +291,16 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	//
 	option_all := false
 	option_long := false
+	option_one := false
 	for _, o := range args_options {
 		if strings.Contains(o, "a") {
 			option_all = true
 		}
 		if strings.Contains(o, "l") {
 			option_long = true
+		}
+		if strings.Contains(o, "1") {
+			option_one = true
 		}
 	}
 
@@ -349,8 +361,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 		write_listings_to_buffer(output_buffer,
 			listings,
-			option_all,
-			option_long)
+			option_long,
+			option_one)
 		listings = make([]Listing, 0)
 	}
 
@@ -387,8 +399,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 
 			write_listings_to_buffer(output_buffer,
 				listings,
-				option_all,
-				option_long)
+				option_long,
+				option_one)
 			output_buffer.WriteString("\n\n")
 			listings = make([]Listing, 0)
 		}
@@ -415,8 +427,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 			}
 			write_listings_to_buffer(output_buffer,
 				listings,
-				option_all,
-				option_long)
+				option_long,
+				option_one)
 		}
 	}
 }
