@@ -39,7 +39,7 @@ func _mkdir(path string) {
 func _rmdir(path string) {
 	err := os.RemoveAll(path)
 	if err != nil {
-		fmt.Printf("error: os.Removeall(%s)\n", path)
+		fmt.Printf("error: os.RemoveAll(%s)\n", path)
 		fmt.Printf("\t%v\n", err)
 		os.Exit(1)
 	}

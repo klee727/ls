@@ -292,6 +292,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	option_all := false
 	option_long := false
 	option_one := false
+	option_dir := false
 	for _, o := range args_options {
 		if strings.Contains(o, "a") {
 			option_all = true
@@ -301,6 +302,9 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 		if strings.Contains(o, "1") {
 			option_one = true
+		}
+		if strings.Contains(o, "d") {
+			option_dir = true
 		}
 	}
 
@@ -370,60 +374,85 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	// then list the directories
 	//
 	if (num_files > 0 && num_dirs > 0) || (num_dirs > 1) {
-		if num_files > 0 {
+		if option_dir {
+			output_buffer.WriteString("\n")
+		} else if num_files > 0 {
 			output_buffer.WriteString("\n\n")
 		}
+		//if num_files > 0 && !option_dir {
+		//		output_buffer.WriteString("\n\n")
+		//	}
 
 		for _, d := range list_dirs {
-			output_buffer.WriteString(d.path + ":\n")
+			if option_dir {
+				l := create_listing(d, group_map)
+				listings = append(listings, l)
+				write_listings_to_buffer(output_buffer,
+					listings,
+					option_long,
+					option_one)
+				output_buffer.WriteString("\n")
+			} else {
+				output_buffer.WriteString(d.path + ":\n")
 
-			if option_all {
-				listings = append(listings, listing_dot)
-				listings = append(listings, listing_dotdot)
-			}
-
-			files_in_dir, err := ioutil.ReadDir(d.path)
-			if err != nil {
-				fmt.Printf("error: %v\n", err)
-				os.Exit(1)
-			}
-
-			for _, _f := range files_in_dir {
-				if is_dot_name(_f) && !option_all {
-					continue
+				if option_all {
+					listings = append(listings, listing_dot)
+					listings = append(listings, listing_dotdot)
 				}
 
-				l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
-				listings = append(listings, l)
-			}
+				files_in_dir, err := ioutil.ReadDir(d.path)
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					os.Exit(1)
+				}
 
-			write_listings_to_buffer(output_buffer,
-				listings,
-				option_long,
-				option_one)
-			output_buffer.WriteString("\n\n")
+				for _, _f := range files_in_dir {
+					if is_dot_name(_f) && !option_all {
+						continue
+					}
+
+					l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
+					listings = append(listings, l)
+				}
+
+				write_listings_to_buffer(output_buffer,
+					listings,
+					option_long,
+					option_one)
+				output_buffer.WriteString("\n\n")
+			}
 			listings = make([]Listing, 0)
 		}
-		output_buffer.Truncate(output_buffer.Len() - 2)
-	} else if num_dirs == 1 {
-		if option_all {
+
+		if option_dir {
+			output_buffer.Truncate(output_buffer.Len() - 1)
+		} else {
+			output_buffer.Truncate(output_buffer.Len() - 2)
+		}
+	} else if num_dirs == 1 || option_dir {
+		if option_all && !option_dir {
 			listings = append(listings, listing_dot)
 			listings = append(listings, listing_dotdot)
 		}
 		for _, d := range list_dirs {
-			files_in_dir, err := ioutil.ReadDir(d.path)
-			if err != nil {
-				fmt.Printf("error: %v\n", err)
-				os.Exit(1)
-			}
-
-			for _, _f := range files_in_dir {
-				if is_dot_name(_f) && !option_all {
-					continue
+			if option_dir {
+				l := create_listing(d, group_map)
+				listings = append(listings, l)
+			} else {
+				files_in_dir, err := ioutil.ReadDir(d.path)
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					os.Exit(1)
 				}
 
-				l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
-				listings = append(listings, l)
+				for _, _f := range files_in_dir {
+					if is_dot_name(_f) && !option_all {
+						continue
+					}
+
+					l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
+					listings = append(listings, l)
+				}
 			}
 			write_listings_to_buffer(output_buffer,
 				listings,
