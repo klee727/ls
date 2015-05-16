@@ -116,15 +116,8 @@ func _mkfile2(path string,
 	}
 }
 
-/*
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
-	*/
-func check_output( t *testing.T, output, expected string ) {
+// fail the given test if the output and expected strings do not match
+func check_output(t *testing.T, output, expected string) {
 	if output != expected {
 		t.Logf("\nexpected:\n\"%s\"\n\nbut got:\n\"%s\"\n", expected, output)
 		t.Fail()
