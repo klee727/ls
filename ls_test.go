@@ -116,6 +116,14 @@ func _mkfile2(path string,
 	}
 }
 
+// change to the test_root, create a directory for the test, and change to that
+// directory
+func setup_test_dir(path string) {
+	_cd(test_root)
+	_mkdir(path)
+	_cd(path)
+}
+
 // fail the given test if the output and expected strings do not match
 func check_output(t *testing.T, output, expected string) {
 	if output != expected {
@@ -210,12 +218,7 @@ func TestMain(m *testing.M) {
 
 // Test running 'ls' in an empty directory
 func Test_NoArgsNoFiles(t *testing.T) {
-	_cd(test_root)
-
-	dir := "NoArgsNoFiles"
-
-	_mkdir(dir)
-	_cd(dir)
+	setup_test_dir("NoArgsNoFiles")
 
 	var output_buffer bytes.Buffer
 	var args []string
@@ -228,12 +231,8 @@ func Test_NoArgsNoFiles(t *testing.T) {
 
 // Test running 'ls' in a directory with files
 func Test_NoArgsFiles(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("NoArgsFiles")
 
-	dir := "NoArgsFiles"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkfile("a")
 	_mkfile("b")
 	_mkfile("c")
@@ -249,12 +248,8 @@ func Test_NoArgsFiles(t *testing.T) {
 
 // Test running 'ls' in a directory with .files
 func Test_NoArgsDotFiles(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("NoArgsDotFiles")
 
-	dir := "NoArgsDotFiles"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkfile(".a")
 	_mkfile(".b")
 	_mkfile(".c")
@@ -268,15 +263,13 @@ func Test_NoArgsDotFiles(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls dir' with .files in that dir
 func Test_NoArgsDotFilesInDir(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("NoArgsDotFilesInDir")
 
-	dir := "NoArgsDotFilesInDir"
 	dir2 := "dir"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkdir(dir2)
+
 	_mkfile(dir2 + "/.a")
 	_mkfile(dir2 + "/.b")
 	_mkfile(dir2 + "/.c")
@@ -291,13 +284,13 @@ func Test_NoArgsDotFilesInDir(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+//func Test_AllNoFiles(t *testing.T) {
+//}
+
+// Test running 'ls -a' with .files in the current directory
 func Test_AllDotFiles(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("AllDotFiles")
 
-	dir := "AllDotFiles"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkfile(".a")
 	_mkfile(".b")
 	_mkfile(".c")
@@ -312,17 +305,15 @@ func Test_AllDotFiles(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls -a ..' with dotfiles in the parent directory
 func Test_AllUpDir(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("AllUpDir")
 
-	dir := "AllUpDir"
-	dir2 := "AllUpDir2"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkfile(".a")
 	_mkfile(".b")
 	_mkfile(".c")
+
+	dir2 := "AllUpDir2"
 	_mkdir(dir2)
 	_cd(dir2)
 
@@ -335,28 +326,31 @@ func Test_AllUpDir(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls -a . ..' with .files in the parent, current, and child
+// directories
 func Test_AllUpDir2(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("AllUpDir2")
 
-	dir := "AllUpDir2"
-	dir2 := "AllUpDir2_1"
-	dir3 := "AllUpDir2_2"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkfile(".a")
 	_mkfile(".b")
 	_mkfile(".c")
+
+	dir2 := "AllUpDir2_1"
 	_mkdir(dir2)
 	_cd(dir2)
+
 	_mkfile(".e")
 	_mkfile(".f")
 	_mkfile(".g")
+
+	dir3 := "AllUpDir2_2"
 	_mkdir(dir3)
 	_cd(dir3)
+
 	_mkfile(".h")
 	_mkfile(".i")
 	_mkfile(".j")
+
 	_cd("..")
 
 	var output_buffer bytes.Buffer
@@ -375,13 +369,10 @@ func Test_AllUpDir2(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls a' with a single 'a' file in the current directory
 func Test_OneFile(t *testing.T) {
-	_cd(test_root)
+	setup_test_dir("OneFile")
 
-	dir := "OneFile"
-
-	_mkdir(dir)
-	_cd(dir)
 	_mkfile("a")
 
 	var output_buffer bytes.Buffer
@@ -393,13 +384,9 @@ func Test_OneFile(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls -l a' with a single 'a; file in the current directory
 func Test_LL_OneFile(t *testing.T) {
-	_cd(test_root)
-
-	dir := "LL_OneFile"
-
-	_mkdir(dir)
-	_cd(dir)
+	setup_test_dir("LL_OneFile")
 
 	time_now := time.Now()
 	size := 13
@@ -434,13 +421,9 @@ func Test_LL_OneFile(t *testing.T) {
 	check_output(t, output, expected)
 }
 
+// Test running 'ls -1' in a directory with a few files
 func Test_option1(t *testing.T) {
-	_cd(test_root)
-
-	dir := "option1"
-
-	_mkdir(dir)
-	_cd(dir)
+	setup_test_dir("option1")
 
 	_mkfile("a")
 	_mkfile("b")
