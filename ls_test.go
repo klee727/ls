@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"strconv"
@@ -12,10 +13,10 @@ import (
 	"time"
 )
 
-const (
-	test_root = "/tmp/ls_test"
-)
+// the root directory where individual test subdirectories are stored.
+var test_root string
 
+// key-value map for converting GIDs to their string representations
 var group_map map[int]string
 
 func _cd(path string) {
@@ -134,6 +135,15 @@ func TestMain(m *testing.M) {
 	// setup
 	//
 
+	// set up the test root temporary directory
+	var err error
+	test_root, err = ioutil.TempDir("", "ls_")
+	if err != nil {
+		fmt.Printf("error:  couldn't create test_root '%s'\n", test_root)
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+
 	// read in all the information from /etc/groups
 	group_map = make(map[int]string)
 
@@ -166,21 +176,6 @@ func TestMain(m *testing.M) {
 		group_name := line_split[0]
 		group_map[int(gid)] = group_name
 	}
-
-	// create the test root directory if it does not exist
-	_, err = os.Stat(test_root)
-	if err != nil && os.IsNotExist(err) {
-		_mkdir(test_root)
-	} else if err != nil {
-		fmt.Printf("error: os.Stat(%s)\n", test_root)
-		fmt.Printf("\t%v\n", err)
-		os.Exit(1)
-	} else {
-		_rmdir(test_root)
-		_mkdir(test_root)
-	}
-
-	_cd(test_root)
 
 	//
 	// run the tests
@@ -425,7 +420,7 @@ func Test_LL_OneFile(t *testing.T) {
 
 	group := group_map[os.Getgid()]
 
-	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %d %d:%d %s",
+	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %d %02d:%02d %s",
 		owner.Username,
 		group,
 		size,
