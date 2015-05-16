@@ -19,6 +19,7 @@ var test_root string
 // key-value map for converting GIDs to their string representations
 var group_map map[int]string
 
+// change directory to the given path
 func _cd(path string) {
 	err := os.Chdir(path)
 	if err != nil {
@@ -28,6 +29,8 @@ func _cd(path string) {
 	}
 }
 
+// create a directory with the given path, using default ownership and 0755
+// permissions
 func _mkdir(path string) {
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
@@ -37,6 +40,7 @@ func _mkdir(path string) {
 	}
 }
 
+// recursively remove the directory at the given path
 func _rmdir(path string) {
 	err := os.RemoveAll(path)
 	if err != nil {
@@ -46,6 +50,7 @@ func _rmdir(path string) {
 	}
 }
 
+// create an empty file at the given path with default ownership and permissions
 func _mkfile(path string) {
 	_, err := os.Create(path)
 	if err != nil {
@@ -55,6 +60,8 @@ func _mkfile(path string) {
 	}
 }
 
+// create a file at the given path with specific permissions, ownership, size,
+// and modified time
 func _mkfile2(path string,
 	//num_hard_links int,
 	mode os.FileMode,
@@ -109,6 +116,23 @@ func _mkfile2(path string,
 	}
 }
 
+/*
+	if output_buffer.String() != expected {
+		t.Logf("expected \"%s\", but got \"%s\"\n",
+			expected,
+			output_buffer.String())
+		t.Fail()
+	}
+	*/
+func check_output( t *testing.T, output, expected string ) {
+	if output != expected {
+		t.Logf("\nexpected:\n\"%s\"\n\nbut got:\n\"%s\"\n", expected, output)
+		t.Fail()
+	}
+}
+
+// remove any consecutive spaces in the given bytes.Buffer, and return the
+// sanitized string
 func clean_output_buffer(buffer bytes.Buffer) string {
 	output := strings.TrimSpace(buffer.String())
 	output_clean := make([]uint8, 0)
@@ -129,6 +153,7 @@ func clean_output_buffer(buffer bytes.Buffer) string {
 	return string(output_clean)
 }
 
+// main test method that sets up the test environment and launches the tests
 func TestMain(m *testing.M) {
 
 	//
@@ -190,6 +215,25 @@ func TestMain(m *testing.M) {
 	os.Exit(result)
 }
 
+// Test running 'ls' in an empty directory
+func Test_NoArgsNoFiles(t *testing.T) {
+	_cd(test_root)
+
+	dir := "NoArgsNoFiles"
+
+	_mkdir(dir)
+	_cd(dir)
+
+	var output_buffer bytes.Buffer
+	var args []string
+	ls(&output_buffer, args)
+
+	expected := ""
+
+	check_output(t, output_buffer.String(), expected)
+}
+
+// Test running 'ls' in a directory with files
 func Test_NoArgsFiles(t *testing.T) {
 	_cd(test_root)
 
@@ -207,14 +251,10 @@ func Test_NoArgsFiles(t *testing.T) {
 
 	expected := "a b c"
 
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls' in a directory with .files
 func Test_NoArgsDotFiles(t *testing.T) {
 	_cd(test_root)
 
@@ -232,12 +272,7 @@ func Test_NoArgsDotFiles(t *testing.T) {
 
 	expected := ""
 
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 func Test_NoArgsDotFilesInDir(t *testing.T) {
@@ -260,13 +295,7 @@ func Test_NoArgsDotFilesInDir(t *testing.T) {
 
 	expected := ""
 
-	if output_buffer.String() != expected {
-		//t.Logf("expected \"%s\", but got \"%s\"\n",
-		t.Logf("expected: \n\n%s\n\nbut got: \n\n%s\n\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 func Test_AllDotFiles(t *testing.T) {
@@ -287,12 +316,7 @@ func Test_AllDotFiles(t *testing.T) {
 
 	expected := ". .. .a .b .c"
 
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 func Test_AllUpDir(t *testing.T) {
@@ -315,12 +339,7 @@ func Test_AllUpDir(t *testing.T) {
 
 	expected := ". .. .a .b .c AllUpDir2"
 
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 func Test_AllUpDir2(t *testing.T) {
@@ -360,13 +379,7 @@ func Test_AllUpDir2(t *testing.T) {
 		"AllUpDir2_2:\n" +
 		". .. .h .i .j"
 
-	if output_buffer.String() != expected {
-		//t.Logf("expected \"%s\", but got \"%s\"\n",
-		t.Logf("expected: \n\n%s\n\nbut got: \n\n%s\n\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 func Test_OneFile(t *testing.T) {
@@ -384,12 +397,7 @@ func Test_OneFile(t *testing.T) {
 
 	expected := "a"
 
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 func Test_LL_OneFile(t *testing.T) {
@@ -430,10 +438,7 @@ func Test_LL_OneFile(t *testing.T) {
 		time_now.Minute(),
 		path)
 
-	if output != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n", expected, output)
-		t.Fail()
-	}
+	check_output(t, output, expected)
 }
 
 func Test_option1(t *testing.T) {
@@ -456,12 +461,7 @@ func Test_option1(t *testing.T) {
 
 	expected := "a\nb\nc\nd\ne"
 
-	if output_buffer.String() != expected {
-		t.Logf("expected \"%s\", but got \"%s\"\n",
-			expected,
-			output_buffer.String())
-		t.Fail()
-	}
+	check_output(t, output_buffer.String(), expected)
 }
 
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
