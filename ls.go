@@ -38,7 +38,8 @@ func is_dot_name(info os.FileInfo) bool {
 	return (info_name_rune[0] == rune('.'))
 }
 
-func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
+func create_listing(fip FileInfoPath,
+	group_map map[int]string) (Listing, error) {
 
 	var current_listing Listing
 
@@ -46,15 +47,10 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 	current_listing.permissions = fip.info.Mode().String()
 
 	sys := fip.info.Sys()
-	if sys == nil {
-		fmt.Printf("error:  sys is nil\n")
-		os.Exit(1)
-	}
 
 	stat, ok := sys.(*syscall.Stat_t)
 	if !ok {
-		fmt.Printf("error:  not ok from *syscall.Stat_t\n")
-		os.Exit(1)
+		return current_listing, fmt.Errorf("syscall failed\n")
 	}
 
 	// number of hard links
@@ -64,9 +60,8 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 	// owner
 	owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid))
 	if err != nil {
-		fmt.Printf("error:  could not look up owner from id %d\n", stat.Uid)
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		return current_listing,
+			fmt.Errorf("could not look up owner from id %d\n", stat.Uid)
 	}
 	current_listing.owner = owner.Username
 
@@ -83,9 +78,8 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 	current_listing.day = fmt.Sprintf("%02d", fip.info.ModTime().Day())
 
 	// time
-	// if older than a year, print the year -- TODO:  revisit this
+	// if older than six months, print the year
 	// otherwise, print hour:minute
-
 	epoch_now := time.Now().Unix()
 	var seconds_in_six_months int64 = 182 * 24 * 60 * 60
 	epoch_six_months_ago := epoch_now - seconds_in_six_months
@@ -105,7 +99,7 @@ func create_listing(fip FileInfoPath, group_map map[int]string) Listing {
 
 	current_listing.name = fip.path
 
-	return current_listing
+	return current_listing, nil
 }
 
 func write_listings_to_buffer(output_buffer *bytes.Buffer,
@@ -227,7 +221,7 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	}
 }
 
-func ls(output_buffer *bytes.Buffer, args []string) {
+func ls(output_buffer *bytes.Buffer, args []string) error {
 	args_options := make([]string, 0)
 	args_files := make([]string, 0)
 	list_dirs := make([]FileInfoPath, 0)
@@ -242,9 +236,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 
 	group_file, err := os.Open("/etc/group")
 	if err != nil {
-		fmt.Printf("error:  couldn't open /etc/group for reading\n")
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("could not open /etc/group for reading\n")
 	}
 
 	reader := bufio.NewReader(group_file)
@@ -262,9 +254,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 
 		gid, err := strconv.ParseInt(line_split[2], 10, 0)
 		if err != nil {
-			fmt.Printf("error:  couldn't convert %s to int\n", line_split[2])
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
+			return err
 		}
 		group_name := line_split[0]
 		group_map[int(gid)] = group_name
@@ -313,19 +303,24 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	//
 	info_dot, err := os.Stat(".")
 	if err != nil {
-		fmt.Printf("error: cannot stat \".\"\n")
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		return err
 	}
-	listing_dot := create_listing(FileInfoPath{".", info_dot}, group_map)
+
+	listing_dot, err := create_listing(FileInfoPath{".", info_dot}, group_map)
+	if err != nil {
+		return err
+	}
 
 	info_dotdot, err := os.Stat("..")
 	if err != nil {
-		fmt.Printf("error: cannot stat \"..\"\n")
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		return err
 	}
-	listing_dotdot := create_listing(FileInfoPath{"..", info_dotdot}, group_map)
+
+	listing_dotdot, err := create_listing(FileInfoPath{"..", info_dotdot},
+		group_map)
+	if err != nil {
+		return err
+	}
 
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
@@ -340,9 +335,10 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	for _, f := range args_files {
 		info, err := os.Stat(f)
 
-		if err != nil {
-			fmt.Printf("error: %v\n", err)
-			os.Exit(1)
+		if err != nil && os.IsNotExist(err) {
+			return fmt.Errorf("cannot access %s: No such file or directory", f)
+		} else if err != nil {
+			return err
 		}
 
 		if info.IsDir() {
@@ -360,7 +356,10 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 	//
 	if num_files > 0 {
 		for _, f := range list_files {
-			l := create_listing(f, group_map)
+			l, err := create_listing(f, group_map)
+			if err != nil {
+				return err
+			}
 			listings = append(listings, l)
 		}
 		write_listings_to_buffer(output_buffer,
@@ -385,7 +384,10 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 
 		for _, d := range list_dirs {
 			if option_dir {
-				l := create_listing(d, group_map)
+				l, err := create_listing(d, group_map)
+				if err != nil {
+					return err
+				}
 				listings = append(listings, l)
 				write_listings_to_buffer(output_buffer,
 					listings,
@@ -402,8 +404,7 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 
 				files_in_dir, err := ioutil.ReadDir(d.path)
 				if err != nil {
-					fmt.Printf("error: %v\n", err)
-					os.Exit(1)
+					return err
 				}
 
 				for _, _f := range files_in_dir {
@@ -411,7 +412,11 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 						continue
 					}
 
-					l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
+					l, err := create_listing(FileInfoPath{_f.Name(), _f},
+						group_map)
+					if err != nil {
+						return err
+					}
 					listings = append(listings, l)
 				}
 
@@ -436,13 +441,15 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 		}
 		for _, d := range list_dirs {
 			if option_dir {
-				l := create_listing(d, group_map)
+				l, err := create_listing(d, group_map)
+				if err != nil {
+					return err
+				}
 				listings = append(listings, l)
 			} else {
 				files_in_dir, err := ioutil.ReadDir(d.path)
 				if err != nil {
-					fmt.Printf("error: %v\n", err)
-					os.Exit(1)
+					return err
 				}
 
 				for _, _f := range files_in_dir {
@@ -450,7 +457,11 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 						continue
 					}
 
-					l := create_listing(FileInfoPath{_f.Name(), _f}, group_map)
+					l, err := create_listing(FileInfoPath{_f.Name(), _f},
+						group_map)
+					if err != nil {
+						return err
+					}
 					listings = append(listings, l)
 				}
 			}
@@ -460,6 +471,8 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 				option_one)
 		}
 	}
+
+	return nil
 }
 
 //
@@ -468,7 +481,11 @@ func ls(output_buffer *bytes.Buffer, args []string) {
 func main() {
 	var output_buffer bytes.Buffer
 
-	ls(&output_buffer, os.Args[1:])
+	err := ls(&output_buffer, os.Args[1:])
+	if err != nil {
+		fmt.Printf("ls: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Printf("%s\n", output_buffer.String())
 }

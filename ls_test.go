@@ -217,8 +217,8 @@ func TestMain(m *testing.M) {
 }
 
 // Test running 'ls' in an empty directory
-func Test_NoArgsNoFiles(t *testing.T) {
-	setup_test_dir("NoArgsNoFiles")
+func Test_None_None_Empty(t *testing.T) {
+	setup_test_dir("None_None_Empty")
 
 	var output_buffer bytes.Buffer
 	var args []string
@@ -230,8 +230,8 @@ func Test_NoArgsNoFiles(t *testing.T) {
 }
 
 // Test running 'ls' in a directory with files
-func Test_NoArgsFiles(t *testing.T) {
-	setup_test_dir("NoArgsFiles")
+func Test_None_None_Files(t *testing.T) {
+	setup_test_dir("None_None_Files")
 
 	_mkfile("a")
 	_mkfile("b")
@@ -247,8 +247,8 @@ func Test_NoArgsFiles(t *testing.T) {
 }
 
 // Test running 'ls' in a directory with .files
-func Test_NoArgsDotFiles(t *testing.T) {
-	setup_test_dir("NoArgsDotFiles")
+func Test_None_None_DotFiles(t *testing.T) {
+	setup_test_dir("None_None_DotFiles")
 
 	_mkfile(".a")
 	_mkfile(".b")
@@ -263,9 +263,39 @@ func Test_NoArgsDotFiles(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
+// Test running 'ls a' when the file 'a' does not exist
+func Test_None_File_Empty(t *testing.T) {
+	setup_test_dir("None_File_Empty")
+
+	var output_buffer bytes.Buffer
+	args := []string{"a"}
+	err := ls(&output_buffer, args)
+
+	expected_out := ""
+	expected_err := "cannot access a: No such file or directory"
+
+	check_output(t, output_buffer.String(), expected_out)
+	check_output(t, fmt.Sprintf("%v", err), expected_err)
+}
+
+// Test running 'ls a' with a single 'a' file in the current directory
+func Test_None_File_Files(t *testing.T) {
+	setup_test_dir("None_File")
+
+	_mkfile("a")
+
+	var output_buffer bytes.Buffer
+	args := []string{"a"}
+	ls(&output_buffer, args)
+
+	expected := "a"
+
+	check_output(t, output_buffer.String(), expected)
+}
+
 // Test running 'ls dir' with .files in that dir
-func Test_NoArgsDotFilesInDir(t *testing.T) {
-	setup_test_dir("NoArgsDotFilesInDir")
+func Test_None_DotFilesInDir(t *testing.T) {
+	setup_test_dir("None_DotFilesInDir")
 
 	dir2 := "dir"
 	_mkdir(dir2)
@@ -284,12 +314,23 @@ func Test_NoArgsDotFilesInDir(t *testing.T) {
 	check_output(t, output_buffer.String(), expected)
 }
 
-//func Test_AllNoFiles(t *testing.T) {
-//}
+// Test running 'ls -a' in an empty directory
+func Test_a_None(t *testing.T) {
+	setup_test_dir("a_None")
+
+	var output_buffer bytes.Buffer
+	var args []string
+	args = append(args, "-a")
+	ls(&output_buffer, args)
+
+	expected := ". .."
+
+	check_output(t, output_buffer.String(), expected)
+}
 
 // Test running 'ls -a' with .files in the current directory
-func Test_AllDotFiles(t *testing.T) {
-	setup_test_dir("AllDotFiles")
+func Test_a_DotFiles(t *testing.T) {
+	setup_test_dir("a_DotFiles")
 
 	_mkfile(".a")
 	_mkfile(".b")
@@ -306,14 +347,14 @@ func Test_AllDotFiles(t *testing.T) {
 }
 
 // Test running 'ls -a ..' with dotfiles in the parent directory
-func Test_AllUpDir(t *testing.T) {
-	setup_test_dir("AllUpDir")
+func Test_a_DotFilesInParentDir(t *testing.T) {
+	setup_test_dir("a_DotFilesInParentDir")
 
 	_mkfile(".a")
 	_mkfile(".b")
 	_mkfile(".c")
 
-	dir2 := "AllUpDir2"
+	dir2 := "dir2"
 	_mkdir(dir2)
 	_cd(dir2)
 
@@ -321,21 +362,21 @@ func Test_AllUpDir(t *testing.T) {
 	args := []string{"-a", ".."}
 	ls(&output_buffer, args)
 
-	expected := ". .. .a .b .c AllUpDir2"
+	expected := ". .. .a .b .c dir2"
 
 	check_output(t, output_buffer.String(), expected)
 }
 
 // Test running 'ls -a . ..' with .files in the parent, current, and child
 // directories
-func Test_AllUpDir2(t *testing.T) {
-	setup_test_dir("AllUpDir2")
+func Test_a_DotFilesInParentDir2(t *testing.T) {
+	setup_test_dir("a_DotFilesInParentDir2")
 
 	_mkfile(".a")
 	_mkfile(".b")
 	_mkfile(".c")
 
-	dir2 := "AllUpDir2_1"
+	dir2 := "dir2"
 	_mkdir(dir2)
 	_cd(dir2)
 
@@ -343,7 +384,7 @@ func Test_AllUpDir2(t *testing.T) {
 	_mkfile(".f")
 	_mkfile(".g")
 
-	dir3 := "AllUpDir2_2"
+	dir3 := "dir3"
 	_mkdir(dir3)
 	_cd(dir3)
 
@@ -358,33 +399,18 @@ func Test_AllUpDir2(t *testing.T) {
 	ls(&output_buffer, args)
 
 	expected := ".:\n" +
-		". .. .e .f .g AllUpDir2_2\n" +
+		". .. .e .f .g dir3\n" +
 		"\n" +
 		"..:\n" +
-		". .. .a .b .c AllUpDir2_1\n" +
+		". .. .a .b .c dir2\n" +
 		"\n" +
-		"AllUpDir2_2:\n" +
+		"dir3:\n" +
 		". .. .h .i .j"
 
 	check_output(t, output_buffer.String(), expected)
 }
 
-// Test running 'ls a' with a single 'a' file in the current directory
-func Test_OneFile(t *testing.T) {
-	setup_test_dir("OneFile")
-
-	_mkfile("a")
-
-	var output_buffer bytes.Buffer
-	args := []string{"a"}
-	ls(&output_buffer, args)
-
-	expected := "a"
-
-	check_output(t, output_buffer.String(), expected)
-}
-
-// Test running 'ls -l a' with a single 'a; file in the current directory
+// Test running 'ls -l a' with a single 'a' file in the current directory
 func Test_LL_OneFile(t *testing.T) {
 	setup_test_dir("LL_OneFile")
 
