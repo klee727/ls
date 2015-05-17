@@ -487,7 +487,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%s\n", output_buffer.String())
+	if output_buffer.String() != "" {
+		fmt.Printf("%s\n", output_buffer.String())
+	}
 }
 
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
