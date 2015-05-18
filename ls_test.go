@@ -519,6 +519,7 @@ func Test_d_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls -d a b c' where a and c are files, but b is a directory
 func Test_d_FilesAndDirs_FilesAndDirs(t *testing.T) {
 	setup_test_dir("d_FilesAndDirs_FilesAndDirs")
 
@@ -531,6 +532,24 @@ func Test_d_FilesAndDirs_FilesAndDirs(t *testing.T) {
 	err := ls(&output_buffer, args)
 
 	expected := "a b c"
+
+	check_output(t, output_buffer.String(), expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -ad' in a directory with files
+func Test_ad_None_Files(t *testing.T) {
+	setup_test_dir("adl_None_Files")
+
+	_mkfile("a")
+	_mkdir("b")
+	_mkfile("a")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-ad"}
+	err := ls(&output_buffer, args)
+
+	expected := "."
 
 	check_output(t, output_buffer.String(), expected)
 	check_error_nil(t, err)
