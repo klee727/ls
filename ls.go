@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-// this a FileInfo paired with the original path as passed in to the program
-// unfortunately, the Name() in FileInfo is only the basename, so the associated
-// path must be manually recorded as well
+// This a FileInfo paired with the original path as passed in to the program.
+// Unfortunately, the Name() in FileInfo is only the basename, so the associated
+// path must be manually recorded as well.
 type FileInfoPath struct {
 	path string
 	info os.FileInfo
@@ -341,10 +341,15 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 			return err
 		}
 
-		if info.IsDir() {
-			list_dirs = append(list_dirs, FileInfoPath{f, info})
-		} else {
+		// for option_dir (-d), treat directories like regular files
+		if option_dir {
 			list_files = append(list_files, FileInfoPath{f, info})
+		} else { // else, separate the files and directories
+			if info.IsDir() {
+				list_dirs = append(list_dirs, FileInfoPath{f, info})
+			} else {
+				list_files = append(list_files, FileInfoPath{f, info})
+			}
 		}
 	}
 

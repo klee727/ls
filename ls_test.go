@@ -487,6 +487,69 @@ func Test_l_File_File(t *testing.T) {
 	check_error_nil(t, ls_err)
 }
 
+// Test running 'ls -d' in an empty directory
+func Test_d_None_Empty(t *testing.T) {
+	setup_test_dir("d_None_Empty")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-d"}
+	err := ls(&output_buffer, args)
+
+	expected := "."
+
+	check_output(t, output_buffer.String(), expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -d' in a directory with files
+func Test_d_None_Files(t *testing.T) {
+	setup_test_dir("d_None_Files")
+
+	_mkfile("a")
+	_mkfile("b")
+	_mkfile("c")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-d"}
+	err := ls(&output_buffer, args)
+
+	expected := "."
+
+	check_output(t, output_buffer.String(), expected)
+	check_error_nil(t, err)
+}
+
+func Test_d_FilesAndDirs_FilesAndDirs(t *testing.T) {
+	setup_test_dir("d_FilesAndDirs_FilesAndDirs")
+
+	_mkfile("a")
+	_mkdir("b")
+	_mkfile("c")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-d", "a", "b", "c"}
+	err := ls(&output_buffer, args)
+
+	expected := "a b c"
+
+	check_output(t, output_buffer.String(), expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -1' in an empty directory
+func Test_1_None_Empty(t *testing.T) {
+	setup_test_dir("1_None_Empty")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-1"}
+	err := ls(&output_buffer, args)
+
+	expected := ""
+
+	check_output(t, output_buffer.String(), expected)
+	check_error_nil(t, err)
+}
+
 // Test running 'ls -1' in a directory with a few files
 func Test_1_None_Files(t *testing.T) {
 	setup_test_dir("1_None_Files")
@@ -501,9 +564,11 @@ func Test_1_None_Files(t *testing.T) {
 	args := []string{"-1"}
 	err := ls(&output_buffer, args)
 
+	output := clean_output_buffer(output_buffer)
+
 	expected := "a\nb\nc\nd\ne"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
