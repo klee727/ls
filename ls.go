@@ -13,6 +13,17 @@ import (
 	"time"
 )
 
+const (
+	color_black  = "\x1b[0;30m"
+	color_red    = "\x1b[0;31m"
+	color_green  = "\x1b[0;32m"
+	color_brown  = "\x1b[0;33m"
+	color_blue   = "\x1b[0;34m"
+	color_purple = "\x1b[0;35m"
+	color_cyan   = "\x1b[0;36m"
+	color_none   = "\x1b[0m"
+)
+
 // This a FileInfo paired with the original path as passed in to the program.
 // Unfortunately, the Name() in FileInfo is only the basename, so the associated
 // path must be manually recorded as well.
@@ -45,6 +56,10 @@ func create_listing(fip FileInfoPath,
 
 	// permissions string
 	current_listing.permissions = fip.info.Mode().String()
+	if current_listing.permissions[0] == 'L' {
+		current_listing.permissions = strings.Replace(
+			current_listing.permissions, "L", "l", 1)
+	}
 
 	sys := fip.info.Sys()
 
@@ -105,7 +120,8 @@ func create_listing(fip FileInfoPath,
 func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	listings []Listing,
 	option_long bool,
-	option_one bool) {
+	option_one bool,
+	option_color bool) {
 
 	if option_long {
 		var (
@@ -196,7 +212,19 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			output_buffer.WriteString(" ")
 
 			// name
+			if option_color {
+				if l.permissions[0] == 'd' {
+					output_buffer.WriteString(color_blue)
+				} else if l.permissions[0] == 'l' {
+					output_buffer.WriteString(color_purple)
+				} else if strings.Contains(l.permissions, "x") {
+					output_buffer.WriteString(color_red)
+				}
+			}
 			output_buffer.WriteString(l.name)
+			if option_color {
+				output_buffer.WriteString(color_none)
+			}
 			output_buffer.WriteString("\n")
 		}
 		if output_buffer.Len() > 0 {
@@ -212,7 +240,19 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		}
 
 		for _, l := range listings {
+			if option_color {
+				if l.permissions[0] == 'd' {
+					output_buffer.WriteString(color_blue)
+				} else if l.permissions[0] == 'l' {
+					output_buffer.WriteString(color_purple)
+				} else if strings.Contains(l.permissions, "x") {
+					output_buffer.WriteString(color_red)
+				}
+			}
 			output_buffer.WriteString(l.name)
+			if option_color {
+				output_buffer.WriteString(color_none)
+			}
 			output_buffer.WriteString(separator)
 		}
 		if output_buffer.Len() > 0 {
@@ -283,18 +323,27 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 	option_long := false
 	option_one := false
 	option_dir := false
+	option_color := false
 	for _, o := range args_options {
-		if strings.Contains(o, "a") {
-			option_all = true
-		}
-		if strings.Contains(o, "l") {
-			option_long = true
-		}
-		if strings.Contains(o, "1") {
-			option_one = true
-		}
-		if strings.Contains(o, "d") {
-			option_dir = true
+
+		// is it a short option '-' or a long option '--'?
+		if strings.Contains(o, "--") {
+			if strings.Contains(o, "--color") {
+				option_color = true
+			}
+		} else {
+			if strings.Contains(o, "a") {
+				option_all = true
+			}
+			if strings.Contains(o, "l") {
+				option_long = true
+			}
+			if strings.Contains(o, "1") {
+				option_one = true
+			}
+			if strings.Contains(o, "d") {
+				option_dir = true
+			}
 		}
 	}
 
@@ -376,7 +425,8 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 		write_listings_to_buffer(output_buffer,
 			listings,
 			option_long,
-			option_one)
+			option_one,
+			option_color)
 		listings = make([]Listing, 0)
 	}
 
@@ -417,7 +467,8 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 			write_listings_to_buffer(output_buffer,
 				listings,
 				option_long,
-				option_one)
+				option_one,
+				option_color)
 			output_buffer.WriteString("\n\n")
 
 			listings = make([]Listing, 0)
@@ -451,7 +502,8 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 			write_listings_to_buffer(output_buffer,
 				listings,
 				option_long,
-				option_one)
+				option_one,
+				option_color)
 		}
 	}
 
