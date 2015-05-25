@@ -19,6 +19,9 @@ var test_root string
 // key-value map for converting GIDs to their string representations
 var group_map map[int]string
 
+// default terminal width
+const tw = 80
+
 // change directory to the given path
 func _cd(path string) {
 	err := os.Chdir(path)
@@ -237,11 +240,12 @@ func Test_None_None_Empty(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	var args []string
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ""
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -255,11 +259,12 @@ func Test_None_None_Files(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	var args []string
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := "a b c"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -273,11 +278,12 @@ func Test_None_None_DotFiles(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	var args []string
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ""
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -287,12 +293,13 @@ func Test_None_File_Empty(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"a"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected_out := ""
 	expected_err := "cannot access a: No such file or directory"
 
-	check_output(t, output_buffer.String(), expected_out)
+	check_output(t, output, expected_out)
 	check_error(t, err, expected_err)
 }
 
@@ -304,11 +311,12 @@ func Test_None_File_Files(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"a"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := "a"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -326,11 +334,12 @@ func Test_None_Dir_DotFilesInDir(t *testing.T) {
 	var output_buffer bytes.Buffer
 	var args []string
 	args = append(args, dir2)
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ""
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -341,11 +350,12 @@ func Test_a_None_Empty(t *testing.T) {
 	var output_buffer bytes.Buffer
 	var args []string
 	args = append(args, "-a")
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ". .."
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -360,11 +370,12 @@ func Test_a_None_DotFiles(t *testing.T) {
 	var output_buffer bytes.Buffer
 	var args []string
 	args = append(args, "-a")
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ". .. .a .b .c"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -382,11 +393,12 @@ func Test_a_Dir_DotFilesInParentDir(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-a", ".."}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ". .. .a .b .c dir2"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -419,7 +431,8 @@ func Test_a_Dirs_DotFilesInParentDir2(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-a", ".", "..", dir3}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ".:\n" +
 		". .. .e .f .g dir3\n" +
@@ -430,7 +443,7 @@ func Test_a_Dirs_DotFilesInParentDir2(t *testing.T) {
 		"dir3:\n" +
 		". .. .h .i .j"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -440,12 +453,13 @@ func Test_l_None_Empty(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-l"}
-	//err := ls(&output_buffer, args)
-	err := ls(&output_buffer, args)
+	//err := ls(&output_buffer, args, tw)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ""
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -460,7 +474,7 @@ func Test_l_File_File(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-l", "a"}
-	ls_err := ls(&output_buffer, args)
+	ls_err := ls(&output_buffer, args, tw)
 
 	output := clean_output_buffer(output_buffer)
 
@@ -493,11 +507,12 @@ func Test_d_None_Empty(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-d"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := "."
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -511,11 +526,12 @@ func Test_d_None_Files(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-d"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := "."
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -529,11 +545,12 @@ func Test_d_FilesAndDirs_FilesAndDirs(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-d", "a", "b", "c"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := "a b c"
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -547,11 +564,12 @@ func Test_ad_None_Files(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-ad"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := "."
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -561,11 +579,12 @@ func Test_1_None_Empty(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-1"}
-	err := ls(&output_buffer, args)
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
 
 	expected := ""
 
-	check_output(t, output_buffer.String(), expected)
+	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
 
@@ -581,8 +600,7 @@ func Test_1_None_Files(t *testing.T) {
 
 	var output_buffer bytes.Buffer
 	args := []string{"-1"}
-	err := ls(&output_buffer, args)
-
+	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
 	expected := "a\nb\nc\nd\ne"

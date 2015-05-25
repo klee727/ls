@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -119,6 +120,7 @@ func create_listing(fip FileInfoPath,
 
 func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	listings []Listing,
+	terminal_width int,
 	option_long bool,
 	option_one bool,
 	option_color bool) {
@@ -230,14 +232,8 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		if output_buffer.Len() > 0 {
 			output_buffer.Truncate(output_buffer.Len() - 1)
 		}
-	} else {
-
-		var separator string
-		if option_one {
-			separator = "\n"
-		} else {
-			separator = " "
-		}
+	} else if option_one {
+		separator := "\n"
 
 		for _, l := range listings {
 			if option_color {
@@ -258,10 +254,100 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		if output_buffer.Len() > 0 {
 			output_buffer.Truncate(output_buffer.Len() - 1)
 		}
+	} else {
+		separator := "  "
+
+		// calculate the number of rows needed for column output
+		num_rows := 1
+		var col_widths []int
+		for {
+			num_cols := len(listings)/num_rows + len(listings)%num_rows
+
+			col_widths = make([]int, num_cols)
+			for i, _ := range col_widths {
+				col_widths[i] = 0
+			}
+
+			// calculate necessary column widths
+			for i := 0; i < len(listings); i++ {
+				col := i / num_rows
+				if col_widths[col] < len(listings[i].name) {
+					col_widths[col] = len(listings[i].name)
+				}
+			}
+
+			// calculate the maximum width of each row
+			max_row_length := 0
+			for i := 0; i < num_cols; i++ {
+				max_row_length += col_widths[i]
+			}
+			max_row_length += len(separator) * (num_cols - 1)
+
+			if max_row_length > terminal_width && num_rows >= len(listings) {
+				break
+			} else if max_row_length > terminal_width {
+				num_rows++
+			} else {
+				break
+			}
+		}
+
+		for r := 0; r < num_rows; r++ {
+			for i, l := range listings {
+				if i%num_rows == r {
+					if option_color {
+						if l.permissions[0] == 'd' {
+							output_buffer.WriteString(color_blue)
+						} else if l.permissions[0] == 'l' {
+							output_buffer.WriteString(color_purple)
+						} else if strings.Contains(l.permissions, "x") {
+							output_buffer.WriteString(color_red)
+						}
+					}
+					output_buffer.WriteString(l.name)
+					if option_color {
+						output_buffer.WriteString(color_none)
+					}
+					for s := 0; s < col_widths[i/num_rows]-len(l.name); s++ {
+						output_buffer.WriteString(" ")
+					}
+					output_buffer.WriteString(separator)
+				}
+			}
+			if len(listings) > 0 {
+				output_buffer.Truncate(output_buffer.Len() - len(separator))
+			}
+			output_buffer.WriteString("\n")
+		}
+		output_buffer.Truncate(output_buffer.Len() - 1)
+
+		/*for _, l := range listings {
+			if option_color {
+				if l.permissions[0] == 'd' {
+					output_buffer.WriteString(color_blue)
+				} else if l.permissions[0] == 'l' {
+					output_buffer.WriteString(color_purple)
+				} else if strings.Contains(l.permissions, "x") {
+					output_buffer.WriteString(color_red)
+				}
+			}
+			output_buffer.WriteString(l.name)
+			if option_color {
+				output_buffer.WriteString(color_none)
+			}
+			output_buffer.WriteString(separator)
+		}
+		if output_buffer.Len() > 0 {
+			if option_one {
+				output_buffer.Truncate(output_buffer.Len() - 1)
+			} else {
+				output_buffer.Truncate(output_buffer.Len() - 2)
+			}
+		}*/
 	}
 }
 
-func ls(output_buffer *bytes.Buffer, args []string) error {
+func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	args_options := make([]string, 0)
 	args_files := make([]string, 0)
 	list_dirs := make([]FileInfoPath, 0)
@@ -424,6 +510,7 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 		}
 		write_listings_to_buffer(output_buffer,
 			listings,
+			width,
 			option_long,
 			option_one,
 			option_color)
@@ -466,6 +553,7 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 
 			write_listings_to_buffer(output_buffer,
 				listings,
+				width,
 				option_long,
 				option_one,
 				option_color)
@@ -501,6 +589,7 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 
 			write_listings_to_buffer(output_buffer,
 				listings,
+				width,
 				option_long,
 				option_one,
 				option_color)
@@ -514,9 +603,18 @@ func ls(output_buffer *bytes.Buffer, args []string) error {
 // main
 //
 func main() {
+	// capture the current terminal dimensions
+	terminal_width, _, err := terminal.GetSize(
+		int(os.Stdout.Fd()))
+	if err != nil {
+		fmt.Printf("error getting terminal dimensions\n")
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+
 	var output_buffer bytes.Buffer
 
-	err := ls(&output_buffer, os.Args[1:])
+	err = ls(&output_buffer, os.Args[1:], terminal_width)
 	if err != nil {
 		fmt.Printf("ls: %v\n", err)
 		os.Exit(1)
