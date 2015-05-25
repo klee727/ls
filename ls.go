@@ -50,6 +50,29 @@ func is_dot_name(info os.FileInfo) bool {
 	return (info_name_rune[0] == rune('.'))
 }
 
+func write_listing_name(output_buffer *bytes.Buffer,
+	l Listing,
+	option_color bool) {
+
+	wrote_color := false
+	if option_color && l.permissions[0] == 'd' {
+		output_buffer.WriteString(color_blue)
+		wrote_color = true
+	} else if option_color && l.permissions[0] == 'l' {
+		output_buffer.WriteString(color_purple)
+		wrote_color = true
+	} else if option_color && strings.Contains(l.permissions, "x") {
+		output_buffer.WriteString(color_red)
+		wrote_color = true
+	}
+
+	output_buffer.WriteString(l.name)
+
+	if wrote_color {
+		output_buffer.WriteString(color_none)
+	}
+}
+
 func create_listing(fip FileInfoPath,
 	group_map map[int]string) (Listing, error) {
 
@@ -214,19 +237,7 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			output_buffer.WriteString(" ")
 
 			// name
-			if option_color {
-				if l.permissions[0] == 'd' {
-					output_buffer.WriteString(color_blue)
-				} else if l.permissions[0] == 'l' {
-					output_buffer.WriteString(color_purple)
-				} else if strings.Contains(l.permissions, "x") {
-					output_buffer.WriteString(color_red)
-				}
-			}
-			output_buffer.WriteString(l.name)
-			if option_color {
-				output_buffer.WriteString(color_none)
-			}
+			write_listing_name(output_buffer, l, option_color)
 			output_buffer.WriteString("\n")
 		}
 		if output_buffer.Len() > 0 {
@@ -236,19 +247,7 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		separator := "\n"
 
 		for _, l := range listings {
-			if option_color {
-				if l.permissions[0] == 'd' {
-					output_buffer.WriteString(color_blue)
-				} else if l.permissions[0] == 'l' {
-					output_buffer.WriteString(color_purple)
-				} else if strings.Contains(l.permissions, "x") {
-					output_buffer.WriteString(color_red)
-				}
-			}
-			output_buffer.WriteString(l.name)
-			if option_color {
-				output_buffer.WriteString(color_none)
-			}
+			write_listing_name(output_buffer, l, option_color)
 			output_buffer.WriteString(separator)
 		}
 		if output_buffer.Len() > 0 {
@@ -295,19 +294,7 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		for r := 0; r < num_rows; r++ {
 			for i, l := range listings {
 				if i%num_rows == r {
-					if option_color {
-						if l.permissions[0] == 'd' {
-							output_buffer.WriteString(color_blue)
-						} else if l.permissions[0] == 'l' {
-							output_buffer.WriteString(color_purple)
-						} else if strings.Contains(l.permissions, "x") {
-							output_buffer.WriteString(color_red)
-						}
-					}
-					output_buffer.WriteString(l.name)
-					if option_color {
-						output_buffer.WriteString(color_none)
-					}
+					write_listing_name(output_buffer, l, option_color)
 					for s := 0; s < col_widths[i/num_rows]-len(l.name); s++ {
 						output_buffer.WriteString(" ")
 					}
@@ -320,30 +307,6 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			output_buffer.WriteString("\n")
 		}
 		output_buffer.Truncate(output_buffer.Len() - 1)
-
-		/*for _, l := range listings {
-			if option_color {
-				if l.permissions[0] == 'd' {
-					output_buffer.WriteString(color_blue)
-				} else if l.permissions[0] == 'l' {
-					output_buffer.WriteString(color_purple)
-				} else if strings.Contains(l.permissions, "x") {
-					output_buffer.WriteString(color_red)
-				}
-			}
-			output_buffer.WriteString(l.name)
-			if option_color {
-				output_buffer.WriteString(color_none)
-			}
-			output_buffer.WriteString(separator)
-		}
-		if output_buffer.Len() > 0 {
-			if option_one {
-				output_buffer.Truncate(output_buffer.Len() - 1)
-			} else {
-				output_buffer.Truncate(output_buffer.Len() - 2)
-			}
-		}*/
 	}
 }
 
