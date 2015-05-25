@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,6 +17,9 @@ var test_root string
 
 // key-value map for converting GIDs to their string representations
 var group_map map[int]string
+
+// key-value map for converting UIDs to their string representations
+var user_map map[int]string
 
 // default terminal width
 const tw = 80
@@ -219,6 +221,39 @@ func TestMain(m *testing.M) {
 		}
 		group_name := line_split[0]
 		group_map[int(gid)] = group_name
+	}
+
+	// read in all the information from /etc/passwd
+	user_map = make(map[int]string)
+
+	user_file, err := os.Open("/etc/passwd")
+	if err != nil {
+		fmt.Printf("error:  couldn't open /etc/passwd for reading\n")
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+
+	reader = bufio.NewReader(user_file)
+	scanner = bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.Trim(line, " \t")
+
+		if line[0] == '#' || line == "" {
+			continue
+		}
+
+		line_split := strings.Split(line, ":")
+
+		uid, err := strconv.ParseInt(line_split[2], 10, 0)
+		if err != nil {
+			fmt.Printf("error:  couldn't convert %s to int\n", line_split[2])
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		user_name := line_split[0]
+		user_map[int(uid)] = user_name
 	}
 
 	//
@@ -478,17 +513,11 @@ func Test_l_File_File(t *testing.T) {
 
 	output := clean_output_buffer(output_buffer)
 
-	owner, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
-	if err != nil {
-		fmt.Printf("error: user.LookupId(%d)\n", os.Getuid())
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-
+	owner := user_map[os.Getuid()]
 	group := group_map[os.Getgid()]
 
 	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %d %02d:%02d %s",
-		owner.Username,
+		owner,
 		group,
 		size,
 		time_now.Month().String()[0:3],

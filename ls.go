@@ -74,7 +74,8 @@ func write_listing_name(output_buffer *bytes.Buffer,
 }
 
 func create_listing(fip FileInfoPath,
-	group_map map[int]string) (Listing, error) {
+	group_map map[int]string,
+	user_map map[int]string) (Listing, error) {
 
 	var current_listing Listing
 
@@ -99,10 +100,15 @@ func create_listing(fip FileInfoPath,
 	// owner
 	owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid))
 	if err != nil {
-		return current_listing,
-			fmt.Errorf("could not look up owner from id %d\n", stat.Uid)
+		// if this causes an error, use the manual user_map
+		//
+		// this can happen if go is built using cross-compilation for multiple
+		// architectures (such as with Fedora Linux), in which case these
+		// OS-specific features aren't implemented
+		current_listing.owner = user_map[int(stat.Uid)]
+	} else {
+		current_listing.owner = owner.Username
 	}
-	current_listing.owner = owner.Username
 
 	// group
 	current_listing.group = group_map[int(stat.Gid)]
@@ -352,6 +358,39 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	//fmt.Printf( "group_map = %v\n", group_map )
 
 	//
+	// read in all information from /etc/passwd for user lookup
+	//
+	user_map := make(map[int]string)
+
+	user_file, err := os.Open("/etc/passwd")
+	if err != nil {
+		return fmt.Errorf("could not open /etc/passwd for reading\n")
+	}
+
+	reader = bufio.NewReader(user_file)
+	scanner = bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.Trim(line, " \t")
+
+		if line[0] == '#' || line == "" {
+			continue
+		}
+
+		line_split := strings.Split(line, ":")
+
+		uid, err := strconv.ParseInt(line_split[2], 10, 0)
+		if err != nil {
+			return err
+		}
+		user_name := line_split[0]
+		user_map[int(uid)] = user_name
+	}
+
+	//fmt.Printf( "user_map = %v\n", user_map )
+
+	//
 	// parse arguments
 	//
 	for _, a := range args {
@@ -404,7 +443,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		return err
 	}
 
-	listing_dot, err := create_listing(FileInfoPath{".", info_dot}, group_map)
+	listing_dot, err := create_listing(
+		FileInfoPath{".", info_dot}, group_map, user_map)
 	if err != nil {
 		return err
 	}
@@ -415,7 +455,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	}
 
 	listing_dotdot, err := create_listing(FileInfoPath{"..", info_dotdot},
-		group_map)
+		group_map, user_map)
 	if err != nil {
 		return err
 	}
@@ -465,7 +505,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	//
 	if num_files > 0 {
 		for _, f := range list_files {
-			l, err := create_listing(f, group_map)
+			l, err := create_listing(f, group_map, user_map)
 			if err != nil {
 				return err
 			}
@@ -507,7 +547,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				}
 
 				l, err := create_listing(FileInfoPath{_f.Name(), _f},
-					group_map)
+					group_map, user_map)
 				if err != nil {
 					return err
 				}
@@ -543,7 +583,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				}
 
 				l, err := create_listing(FileInfoPath{_f.Name(), _f},
-					group_map)
+					group_map, user_map)
 				if err != nil {
 					return err
 				}
