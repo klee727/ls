@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"strconv"
 	"strings"
 	"testing"
@@ -513,7 +514,14 @@ func Test_l_File_File(t *testing.T) {
 
 	output := clean_output_buffer(output_buffer)
 
-	owner := user_map[os.Getuid()]
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
 	group := group_map[os.Getgid()]
 
 	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %d %02d:%02d %s",
