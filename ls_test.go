@@ -275,7 +275,7 @@ func Test_None_None_Empty(t *testing.T) {
 	setup_test_dir("None_None_Empty")
 
 	var output_buffer bytes.Buffer
-	var args []string
+	args := []string{}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -294,7 +294,7 @@ func Test_None_None_Files(t *testing.T) {
 	_mkfile("c")
 
 	var output_buffer bytes.Buffer
-	var args []string
+	args := []string{}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -313,7 +313,7 @@ func Test_None_None_DotFiles(t *testing.T) {
 	_mkfile(".c")
 
 	var output_buffer bytes.Buffer
-	var args []string
+	args := []string{}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -384,8 +384,7 @@ func Test_a_None_Empty(t *testing.T) {
 	setup_test_dir("a_None_Empty")
 
 	var output_buffer bytes.Buffer
-	var args []string
-	args = append(args, "-a")
+	args := []string{"-a", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -404,8 +403,7 @@ func Test_a_None_DotFiles(t *testing.T) {
 	_mkfile(".c")
 
 	var output_buffer bytes.Buffer
-	var args []string
-	args = append(args, "-a")
+	args := []string{"-a", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -428,7 +426,7 @@ func Test_a_Dir_DotFilesInParentDir(t *testing.T) {
 	_cd(dir2)
 
 	var output_buffer bytes.Buffer
-	args := []string{"-a", ".."}
+	args := []string{"-a", "..", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -466,7 +464,7 @@ func Test_a_Dirs_DotFilesInParentDir2(t *testing.T) {
 	_cd("..")
 
 	var output_buffer bytes.Buffer
-	args := []string{"-a", ".", "..", dir3}
+	args := []string{"-a", ".", "..", "--nocolor", dir3}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -543,7 +541,7 @@ func Test_d_None_Empty(t *testing.T) {
 	setup_test_dir("d_None_Empty")
 
 	var output_buffer bytes.Buffer
-	args := []string{"-d"}
+	args := []string{"-d", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -562,7 +560,7 @@ func Test_d_None_Files(t *testing.T) {
 	_mkfile("c")
 
 	var output_buffer bytes.Buffer
-	args := []string{"-d"}
+	args := []string{"-d", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -581,7 +579,7 @@ func Test_d_FilesAndDirs_FilesAndDirs(t *testing.T) {
 	_mkfile("c")
 
 	var output_buffer bytes.Buffer
-	args := []string{"-d", "a", "b", "c"}
+	args := []string{"-d", "a", "b", "c", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 
@@ -600,7 +598,7 @@ func Test_ad_None_Files(t *testing.T) {
 	_mkfile("a")
 
 	var output_buffer bytes.Buffer
-	args := []string{"-ad"}
+	args := []string{"-ad", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 

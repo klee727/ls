@@ -59,16 +59,22 @@ func write_listing_name(output_buffer *bytes.Buffer,
 		return
 	}
 
+	applied_color := false
 	if l.permissions[0] == 'd' {
 		output_buffer.WriteString(color_blue)
+		applied_color = true
 	} else if l.permissions[0] == 'l' {
 		output_buffer.WriteString(color_purple)
+		applied_color = true
 	} else if strings.Contains(l.permissions, "x") {
 		output_buffer.WriteString(color_red)
+		applied_color = true
 	}
 
 	output_buffer.WriteString(l.name)
-	output_buffer.WriteString(color_none)
+	if applied_color {
+		output_buffer.WriteString(color_none)
+	}
 }
 
 func create_listing(fip FileInfoPath,
@@ -421,13 +427,13 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	option_long := false
 	option_one := false
 	option_dir := false
-	option_color := false
+	option_color := true
 	for _, o := range args_options {
 
 		// is it a short option '-' or a long option '--'?
 		if strings.Contains(o, "--") {
-			if strings.Contains(o, "--color") {
-				option_color = true
+			if strings.Contains(o, "--nocolor") {
+				option_color = false
 			}
 		} else {
 			if strings.Contains(o, "a") {
