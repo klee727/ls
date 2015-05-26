@@ -33,6 +33,17 @@ type FileInfoPath struct {
 	info os.FileInfo
 }
 
+// This struct wraps all the option settings for the program into a single
+// object.
+type Options struct {
+	all          bool
+	long         bool
+	one          bool
+	dir          bool
+	color        bool
+	sort_reverse bool
+}
+
 type Listing struct {
 	permissions    string
 	num_hard_links string
@@ -52,9 +63,9 @@ func is_dot_name(info os.FileInfo) bool {
 
 func write_listing_name(output_buffer *bytes.Buffer,
 	l Listing,
-	option_color bool) {
+	options Options) {
 
-	if !option_color {
+	if !options.color {
 		output_buffer.WriteString(l.name)
 		return
 	}
@@ -163,14 +174,48 @@ func create_listing(fip FileInfoPath,
 	return current_listing, nil
 }
 
+func compare_noop(a, b Listing) int {
+	return -1
+}
+
+func compare_reverse(a, b Listing) int {
+	if a.name > b.name {
+		return -1
+	}
+
+	return 1
+}
+
 func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	listings []Listing,
 	terminal_width int,
-	option_long bool,
-	option_one bool,
-	option_color bool) {
+	options Options) {
 
-	if option_long {
+	// sort the listings as necessary
+	comparison_function := compare_noop
+	if options.sort_reverse {
+		comparison_function = compare_reverse
+	}
+
+	for {
+		done := true
+		for i := 0; i < len(listings)-1; i++ {
+			a := listings[i]
+			b := listings[i+1]
+
+			if comparison_function(a, b) > -1 {
+				tmp := a
+				listings[i] = listings[i+1]
+				listings[i+1] = tmp
+				done = false
+			}
+		}
+		if done {
+			break
+		}
+	}
+
+	if options.long {
 		var (
 			width_permissions    int = 0
 			width_num_hard_links int = 0
@@ -259,17 +304,17 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			output_buffer.WriteString(" ")
 
 			// name
-			write_listing_name(output_buffer, l, option_color)
+			write_listing_name(output_buffer, l, options)
 			output_buffer.WriteString("\n")
 		}
 		if output_buffer.Len() > 0 {
 			output_buffer.Truncate(output_buffer.Len() - 1)
 		}
-	} else if option_one {
+	} else if options.one {
 		separator := "\n"
 
 		for _, l := range listings {
-			write_listing_name(output_buffer, l, option_color)
+			write_listing_name(output_buffer, l, options)
 			output_buffer.WriteString(separator)
 		}
 		if output_buffer.Len() > 0 {
@@ -316,7 +361,7 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		for r := 0; r < num_rows; r++ {
 			for i, l := range listings {
 				if i%num_rows == r {
-					write_listing_name(output_buffer, l, option_color)
+					write_listing_name(output_buffer, l, options)
 					for s := 0; s < col_widths[i/num_rows]-len(l.name); s++ {
 						output_buffer.WriteString(" ")
 					}
@@ -423,30 +468,29 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	//
 	// parse options
 	//
-	option_all := false
-	option_long := false
-	option_one := false
-	option_dir := false
-	option_color := true
+	var options Options
 	for _, o := range args_options {
 
 		// is it a short option '-' or a long option '--'?
 		if strings.Contains(o, "--") {
 			if strings.Contains(o, "--nocolor") {
-				option_color = false
+				options.color = false
 			}
 		} else {
-			if strings.Contains(o, "a") {
-				option_all = true
-			}
-			if strings.Contains(o, "l") {
-				option_long = true
-			}
 			if strings.Contains(o, "1") {
-				option_one = true
+				options.one = true
+			}
+			if strings.Contains(o, "a") {
+				options.all = true
 			}
 			if strings.Contains(o, "d") {
-				option_dir = true
+				options.dir = true
+			}
+			if strings.Contains(o, "l") {
+				options.long = true
+			}
+			if strings.Contains(o, "r") {
+				options.sort_reverse = true
 			}
 		}
 	}
@@ -482,7 +526,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		this_dir, _ := os.Stat(".")
 
 		// for option_dir (-d), treat the '.' directory like a regular file
-		if option_dir {
+		if options.dir {
 			list_files = append(list_files, FileInfoPath{".", this_dir})
 		} else { // else, treat '.' like a directory
 			list_dirs = append(list_dirs, FileInfoPath{".", this_dir})
@@ -502,7 +546,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		}
 
 		// for option_dir (-d), treat directories like regular files
-		if option_dir {
+		if options.dir {
 			list_files = append(list_files, FileInfoPath{f, info})
 		} else { // else, separate the files and directories
 			if info.IsDir() {
@@ -530,9 +574,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		write_listings_to_buffer(output_buffer,
 			listings,
 			width,
-			option_long,
-			option_one,
-			option_color)
+			options)
 		listings = make([]Listing, 0)
 	}
 
@@ -547,7 +589,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		for _, d := range list_dirs {
 			output_buffer.WriteString(d.path + ":\n")
 
-			if option_all {
+			if options.all {
 				listings = append(listings, listing_dot)
 				listings = append(listings, listing_dotdot)
 			}
@@ -558,7 +600,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			}
 
 			for _, _f := range files_in_dir {
-				if is_dot_name(_f) && !option_all {
+				if is_dot_name(_f) && !options.all {
 					continue
 				}
 
@@ -573,9 +615,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			write_listings_to_buffer(output_buffer,
 				listings,
 				width,
-				option_long,
-				option_one,
-				option_color)
+				options)
 			output_buffer.WriteString("\n\n")
 
 			listings = make([]Listing, 0)
@@ -583,7 +623,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 
 		output_buffer.Truncate(output_buffer.Len() - 2)
 	} else if num_dirs == 1 {
-		if option_all {
+		if options.all {
 			listings = append(listings, listing_dot)
 			listings = append(listings, listing_dotdot)
 		}
@@ -594,7 +634,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			}
 
 			for _, _f := range files_in_dir {
-				if is_dot_name(_f) && !option_all {
+				if is_dot_name(_f) && !options.all {
 					continue
 				}
 
@@ -609,9 +649,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			write_listings_to_buffer(output_buffer,
 				listings,
 				width,
-				option_long,
-				option_one,
-				option_color)
+				options)
 		}
 	}
 

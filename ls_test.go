@@ -644,4 +644,24 @@ func Test_1_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+func Test_r_None_Files(t *testing.T) {
+	setup_test_dir("r_None_Files")
+
+	_mkfile("a")
+	_mkfile("b")
+	_mkfile("c")
+	_mkfile("d")
+	_mkfile("e")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-r"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "e d c b a"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
