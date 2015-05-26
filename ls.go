@@ -54,23 +54,21 @@ func write_listing_name(output_buffer *bytes.Buffer,
 	l Listing,
 	option_color bool) {
 
-	wrote_color := false
-	if option_color && l.permissions[0] == 'd' {
+	if !option_color {
+		output_buffer.WriteString(l.name)
+		return
+	}
+
+	if l.permissions[0] == 'd' {
 		output_buffer.WriteString(color_blue)
-		wrote_color = true
-	} else if option_color && l.permissions[0] == 'l' {
+	} else if l.permissions[0] == 'l' {
 		output_buffer.WriteString(color_purple)
-		wrote_color = true
-	} else if option_color && strings.Contains(l.permissions, "x") {
+	} else if strings.Contains(l.permissions, "x") {
 		output_buffer.WriteString(color_red)
-		wrote_color = true
 	}
 
 	output_buffer.WriteString(l.name)
-
-	if wrote_color {
-		output_buffer.WriteString(color_none)
-	}
+	output_buffer.WriteString(color_none)
 }
 
 func create_listing(fip FileInfoPath,
