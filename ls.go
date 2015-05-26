@@ -103,13 +103,25 @@ func create_listing(fip FileInfoPath,
 		// this can happen if go is built using cross-compilation for multiple
 		// architectures (such as with Fedora Linux), in which case these
 		// OS-specific features aren't implemented
-		current_listing.owner = user_map[int(stat.Uid)]
+		_owner := user_map[int(stat.Uid)]
+		if _owner == "" {
+			// if the user isn't in the map, just use the uid number
+			current_listing.owner = fmt.Sprintf("%d", stat.Uid)
+		} else {
+			current_listing.owner = _owner
+		}
 	} else {
 		current_listing.owner = owner.Username
 	}
 
 	// group
-	current_listing.group = group_map[int(stat.Gid)]
+	_group := group_map[int(stat.Gid)]
+	if _group == "" {
+		// if the group isn't in the map, just use the gid number
+		current_listing.group = fmt.Sprintf("%d", stat.Gid)
+	} else {
+		current_listing.group = _group
+	}
 
 	// size
 	current_listing.size = fmt.Sprintf("%d", fip.info.Size())
@@ -605,8 +617,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 //
 func main() {
 	// capture the current terminal dimensions
-	terminal_width, _, err := terminal.GetSize(
-		int(os.Stdout.Fd()))
+	terminal_width, _, err := terminal.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		fmt.Printf("error getting terminal dimensions\n")
 		fmt.Printf("%v\n", err)
