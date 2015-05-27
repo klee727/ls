@@ -42,6 +42,7 @@ type Options struct {
 	dir          bool
 	color        bool
 	sort_reverse bool
+	sort_time    bool
 }
 
 type Listing struct {
@@ -50,6 +51,7 @@ type Listing struct {
 	owner          string
 	group          string
 	size           string
+	epoch_nano     int64
 	month          string
 	day            string
 	time           string
@@ -143,6 +145,9 @@ func create_listing(fip FileInfoPath,
 	// size
 	current_listing.size = fmt.Sprintf("%d", fip.info.Size())
 
+	// epoch_nano
+	current_listing.epoch_nano = fip.info.ModTime().UnixNano()
+
 	// month
 	current_listing.month = fip.info.ModTime().Month().String()[0:3]
 
@@ -178,8 +183,8 @@ func compare_noop(a, b Listing) int {
 	return -1
 }
 
-func compare_reverse(a, b Listing) int {
-	if a.name > b.name {
+func compare_time(a, b Listing) int {
+	if a.epoch_nano > b.epoch_nano {
 		return -1
 	}
 
@@ -193,8 +198,8 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 
 	// sort the listings as necessary
 	comparison_function := compare_noop
-	if options.sort_reverse {
-		comparison_function = compare_reverse
+	if options.sort_time {
+		comparison_function = compare_time
 	}
 
 	for {
@@ -212,6 +217,26 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		}
 		if done {
 			break
+		}
+	}
+
+	if options.sort_reverse {
+		middle_index := (len(listings) / 2)
+		if len(listings)%2 == 0 {
+			middle_index--
+		}
+
+		for i := 0; i <= middle_index; i++ {
+			front_index := i
+			rear_index := len(listings) - 1 - i
+
+			if front_index == rear_index {
+				break
+			}
+
+			tmp := listings[front_index]
+			listings[front_index] = listings[rear_index]
+			listings[rear_index] = tmp
 		}
 	}
 
@@ -469,7 +494,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	// parse options
 	//
 	var options Options
-	options.color = true  // use color by default
+	options.color = true // use color by default
 	for _, o := range args_options {
 
 		// is it a short option '-' or a long option '--'?
@@ -492,6 +517,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			}
 			if strings.Contains(o, "r") {
 				options.sort_reverse = true
+			}
+			if strings.Contains(o, "t") {
+				options.sort_time = true
 			}
 		}
 	}
