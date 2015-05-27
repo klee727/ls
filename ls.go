@@ -469,6 +469,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	// parse options
 	//
 	var options Options
+	options.color = true  // use color by default
 	for _, o := range args_options {
 
 		// is it a short option '-' or a long option '--'?

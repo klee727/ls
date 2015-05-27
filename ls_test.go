@@ -304,6 +304,24 @@ func Test_None_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls' in a directory containing a directory, and ensure that the
+// directory's name is in color
+func Test_None_None_Dir(t *testing.T) {
+	setup_test_dir("None_None_Dir")
+
+	_mkdir("test_dir")
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("%stest_dir%s", color_blue, color_none)
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
 // Test running 'ls' in a directory with .files
 func Test_None_None_DotFiles(t *testing.T) {
 	setup_test_dir("None_None_DotFiles")
@@ -644,6 +662,7 @@ func Test_1_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls -r' in a directory with a few files
 func Test_r_None_Files(t *testing.T) {
 	setup_test_dir("r_None_Files")
 
