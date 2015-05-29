@@ -66,6 +66,36 @@ func _mkfile(path string) {
 	}
 }
 
+// Perform the necessary Chmod, Chown, and Chtimes on the given path
+func _modify_path(path string,
+	mode os.FileMode,
+	uid int,
+	gid int,
+	mod_epoch_s time.Time) {
+
+	err := os.Chmod(path, mode)
+	if err != nil {
+		fmt.Printf("error: os.Chmod(%s, %d)\n", path, mode)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+
+	err = os.Chown(path, uid, gid)
+	if err != nil {
+		fmt.Printf("error: os.Chmod(%s, %d)\n", path, mode)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+
+	err = os.Chtimes(path, mod_epoch_s, mod_epoch_s)
+	if err != nil {
+		fmt.Printf("error: os.Chtimes(%s, %v, %v)\n", path, mod_epoch_s,
+			mod_epoch_s)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+}
+
 // create a file at the given path with specific permissions, ownership, size,
 // and modified time
 func _mkfile2(path string,
@@ -79,20 +109,6 @@ func _mkfile2(path string,
 	f, err := os.Create(path)
 	if err != nil {
 		fmt.Printf("error: os.Create(%s)\n", path)
-		fmt.Printf("\t%v\n", err)
-		os.Exit(1)
-	}
-
-	err = os.Chmod(path, mode)
-	if err != nil {
-		fmt.Printf("error: os.Chmod(%s, %d)\n", path, mode)
-		fmt.Printf("\t%v\n", err)
-		os.Exit(1)
-	}
-
-	err = os.Chown(path, uid, gid)
-	if err != nil {
-		fmt.Printf("error: os.Chmod(%s, %d)\n", path, mode)
 		fmt.Printf("\t%v\n", err)
 		os.Exit(1)
 	}
@@ -113,13 +129,25 @@ func _mkfile2(path string,
 		os.Exit(1)
 	}
 
-	err = os.Chtimes(path, mod_epoch_s, mod_epoch_s)
+	_modify_path(path, mode, uid, gid, mod_epoch_s)
+}
+
+// create a directory at the given path with specific permissions, ownership,
+// and modified time
+func _mkdir2(path string,
+	mode os.FileMode,
+	uid int,
+	gid int,
+	mod_epoch_s time.Time) {
+
+	err := os.Mkdir(path, mode)
 	if err != nil {
-		fmt.Printf("error: os.Chtimes(%s, %v, %v)\n", path, mod_epoch_s,
-			mod_epoch_s)
+		fmt.Printf("error: os.Mkdir(%s, %v)\n", path, mode)
 		fmt.Printf("\t%v\n", err)
 		os.Exit(1)
 	}
+
+	_modify_path(path, mode, uid, gid, mod_epoch_s)
 }
 
 // change to the test_root, create a directory for the test, and change to that
@@ -662,6 +690,21 @@ func Test_1_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls -r' in an empty directory
+func Test_r_None_None(t *testing.T) {
+	setup_test_dir("r_None_None")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-r"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := ""
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
 // Test running 'ls -r' in a directory with a few files
 func Test_r_None_Files(t *testing.T) {
 	setup_test_dir("r_None_Files")
@@ -678,6 +721,128 @@ func Test_r_None_Files(t *testing.T) {
 	output := clean_output_buffer(output_buffer)
 
 	expected := "e d c b a"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -t' in an empty directory
+func Test_t_None_None(t *testing.T) {
+	setup_test_dir("t_None_None")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-t"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := ""
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -t' in a directory with a few files with different modified
+// times
+func Test_t_None_Files(t *testing.T) {
+	setup_test_dir("t_None_Files")
+
+	time_now := time.Now()
+	_mkfile2("e", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now)
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-1*time.Second))
+	_mkfile2("d", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-2*time.Second))
+	_mkfile2("c", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-3*time.Second))
+	_mkfile2("f", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-4*time.Second))
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-5*time.Second))
+
+	var output_buffer bytes.Buffer
+	args := []string{"-t"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "e b d c f a"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+func Test_t_FilesAndDirs_FilesAndDirs(t *testing.T) {
+	setup_test_dir("t_FilesAndDirs_FilesAndDirs")
+
+	time_now := time.Now()
+
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-1*time.Second))
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-5*time.Second))
+
+	_mkdir2("dir0", 0755, os.Getuid(), os.Getgid(), time_now)
+	_mkfile2("dir0/minus_one", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-1*time.Second))
+	_mkfile2("dir0/zero", 0600, os.Getuid(), os.Getgid(), 0, time_now)
+
+	_mkdir2("dir2", 0755, os.Getuid(), os.Getgid(), time_now.Add(-2*time.Second))
+	_mkfile2("dir2/e", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now)
+	_mkfile2("dir2/b", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-1*time.Second))
+	_mkfile2("dir2/d", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-2*time.Second))
+	_mkfile2("dir2/c", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-3*time.Second))
+	_mkfile2("dir2/f", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-4*time.Second))
+	_mkfile2("dir2/a", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-5*time.Second))
+
+	_mkdir2("dir1", 0755, os.Getuid(), os.Getgid(), time_now.Add(-5*time.Second))
+
+	var output_buffer bytes.Buffer
+	args := []string{"-t", "a", "b", "dir0", "dir1", "dir2"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "b a\n\n" +
+		"dir0:\n" +
+		"zero minus_one\n\n" +
+		"dir2:\n" +
+		"e b d c f a\n\n" +
+		"dir1:"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -rt' in a directory with a few files with different modified
+// times
+func Test_rt_None_Files(t *testing.T) {
+	setup_test_dir("rt_None_Files")
+
+	time_now := time.Now()
+	_mkfile2("e", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now)
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-1*time.Second))
+	_mkfile2("d", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-2*time.Second))
+	_mkfile2("c", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-3*time.Second))
+	_mkfile2("f", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-4*time.Second))
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0,
+		time_now.Add(-5*time.Second))
+
+	var output_buffer bytes.Buffer
+	args := []string{"-rt"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a f c d b e"
 
 	check_output(t, output, expected)
 	check_error_nil(t, err)

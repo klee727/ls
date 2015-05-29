@@ -184,19 +184,15 @@ func compare_noop(a, b Listing) int {
 }
 
 func compare_time(a, b Listing) int {
-	if a.epoch_nano > b.epoch_nano {
+	//if a.epoch_nano > b.epoch_nano {
+	if a.epoch_nano >= b.epoch_nano {
 		return -1
 	}
 
 	return 1
 }
 
-func write_listings_to_buffer(output_buffer *bytes.Buffer,
-	listings []Listing,
-	terminal_width int,
-	options Options) {
-
-	// sort the listings as necessary
+func sort_listings(listings []Listing, options Options) {
 	comparison_function := compare_noop
 	if options.sort_time {
 		comparison_function = compare_time
@@ -239,6 +235,12 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			listings[rear_index] = tmp
 		}
 	}
+}
+
+func write_listings_to_buffer(output_buffer *bytes.Buffer,
+	listings []Listing,
+	terminal_width int,
+	options Options) {
 
 	if options.long {
 		var (
@@ -600,6 +602,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			}
 			listings = append(listings, l)
 		}
+
+		sort_listings(listings, options)
+
 		write_listings_to_buffer(output_buffer,
 			listings,
 			width,
@@ -615,8 +620,60 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			output_buffer.WriteString("\n\n")
 		}
 
+		dir_listings := make([]Listing, 0)
+
+		for _, f := range list_dirs {
+			l, err := create_listing(f, group_map, user_map)
+			if err != nil {
+				return err
+			}
+			dir_listings = append(dir_listings, l)
+		}
+
+		sort_listings(dir_listings, options)
+
+		for _, d := range dir_listings {
+			output_buffer.WriteString(d.name + ":\n")
+
+			if options.all {
+				listings = append(listings, listing_dot)
+				listings = append(listings, listing_dotdot)
+			}
+
+			//files_in_dir, err := ioutil.ReadDir(d.path)
+			files_in_dir, err := ioutil.ReadDir(d.name)
+			if err != nil {
+				return err
+			}
+
+			for _, _f := range files_in_dir {
+				if is_dot_name(_f) && !options.all {
+					continue
+				}
+
+				l, err := create_listing(FileInfoPath{_f.Name(), _f},
+					group_map, user_map)
+				if err != nil {
+					return err
+				}
+				listings = append(listings, l)
+			}
+
+			// sort as necessary
+			sort_listings(listings, options)
+
+			write_listings_to_buffer(output_buffer,
+				listings,
+				width,
+				options)
+			output_buffer.WriteString("\n\n")
+
+			listings = make([]Listing, 0)
+		}
+
+		output_buffer.Truncate(output_buffer.Len() - 2)
+	} else if num_dirs == 1 {
 		for _, d := range list_dirs {
-			output_buffer.WriteString(d.path + ":\n")
 
 			if options.all {
 				listings = append(listings, listing_dot)
@@ -641,39 +698,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				listings = append(listings, l)
 			}
 
-			write_listings_to_buffer(output_buffer,
-				listings,
-				width,
-				options)
-			output_buffer.WriteString("\n\n")
-
-			listings = make([]Listing, 0)
-		}
-
-		output_buffer.Truncate(output_buffer.Len() - 2)
-	} else if num_dirs == 1 {
-		if options.all {
-			listings = append(listings, listing_dot)
-			listings = append(listings, listing_dotdot)
-		}
-		for _, d := range list_dirs {
-			files_in_dir, err := ioutil.ReadDir(d.path)
-			if err != nil {
-				return err
-			}
-
-			for _, _f := range files_in_dir {
-				if is_dot_name(_f) && !options.all {
-					continue
-				}
-
-				l, err := create_listing(FileInfoPath{_f.Name(), _f},
-					group_map, user_map)
-				if err != nil {
-					return err
-				}
-				listings = append(listings, l)
-			}
+			sort_listings(listings, options)
 
 			write_listings_to_buffer(output_buffer,
 				listings,
