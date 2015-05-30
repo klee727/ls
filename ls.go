@@ -411,8 +411,6 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	list_dirs := make([]Listing, 0)
 	list_files := make([]Listing, 0)
 
-	listings := make([]Listing, 0)
-
 	//
 	// read in all the information from /etc/groups
 	//
@@ -597,21 +595,19 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		for _, d := range list_dirs {
 			output_buffer.WriteString(d.name + ":\n")
 
-			listings, _ = list_files_in_dir(d)
+			listings, _ := list_files_in_dir(d)
 
 			write_listings_to_buffer(output_buffer,
 				listings,
 				width)
 			output_buffer.WriteString("\n\n")
-
-			listings = make([]Listing, 0)
 		}
 
 		output_buffer.Truncate(output_buffer.Len() - 2)
 	} else if num_dirs == 1 {
 		for _, d := range list_dirs {
 
-			listings, _ = list_files_in_dir(d)
+			listings, _ := list_files_in_dir(d)
 
 			write_listings_to_buffer(output_buffer,
 				listings,
