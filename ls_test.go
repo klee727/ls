@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -15,12 +14,6 @@ import (
 
 // the root directory where individual test subdirectories are stored.
 var test_root string
-
-// key-value map for converting GIDs to their string representations
-var group_map map[int]string
-
-// key-value map for converting UIDs to their string representations
-var user_map map[int]string
 
 // default terminal width
 const tw = 80
@@ -217,72 +210,6 @@ func TestMain(m *testing.M) {
 		fmt.Printf("error:  couldn't create test_root '%s'\n", test_root)
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
-	}
-
-	// read in all the information from /etc/groups
-	group_map = make(map[int]string)
-
-	group_file, err := os.Open("/etc/group")
-	if err != nil {
-		fmt.Printf("error:  couldn't open /etc/group for reading\n")
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-
-	reader := bufio.NewReader(group_file)
-	scanner := bufio.NewScanner(reader)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.Trim(line, " \t")
-
-		if line[0] == '#' || line == "" {
-			continue
-		}
-
-		line_split := strings.Split(line, ":")
-
-		gid, err := strconv.ParseInt(line_split[2], 10, 0)
-		if err != nil {
-			fmt.Printf("error:  couldn't convert %s to int\n", line_split[2])
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
-		}
-		group_name := line_split[0]
-		group_map[int(gid)] = group_name
-	}
-
-	// read in all the information from /etc/passwd
-	user_map = make(map[int]string)
-
-	user_file, err := os.Open("/etc/passwd")
-	if err != nil {
-		fmt.Printf("error:  couldn't open /etc/passwd for reading\n")
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-
-	reader = bufio.NewReader(user_file)
-	scanner = bufio.NewScanner(reader)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.Trim(line, " \t")
-
-		if line[0] == '#' || line == "" {
-			continue
-		}
-
-		line_split := strings.Split(line, ":")
-
-		uid, err := strconv.ParseInt(line_split[2], 10, 0)
-		if err != nil {
-			fmt.Printf("error:  couldn't convert %s to int\n", line_split[2])
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
-		}
-		user_name := line_split[0]
-		user_map[int(uid)] = user_name
 	}
 
 	//
