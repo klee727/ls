@@ -659,10 +659,14 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 
 			listings, _ := list_files_in_dir(d)
 
-			write_listings_to_buffer(output_buffer,
-				listings,
-				width)
-			output_buffer.WriteString("\n\n")
+			if len(listings) > 0 {
+				write_listings_to_buffer(output_buffer,
+					listings,
+					width)
+				output_buffer.WriteString("\n\n")
+			} else {
+				output_buffer.WriteString("\n")
+			}
 		}
 
 		output_buffer.Truncate(output_buffer.Len() - 2)
