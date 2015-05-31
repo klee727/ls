@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// Base set of color codes for colorized output
 const (
 	color_black  = "\x1b[0;30m"
 	color_red    = "\x1b[0;31m"
@@ -45,6 +46,8 @@ type Options struct {
 	sort_time    bool
 }
 
+// Listings contain all the information about a file or directory in a printable
+// form.
 type Listing struct {
 	permissions    string
 	num_hard_links string
@@ -58,19 +61,16 @@ type Listing struct {
 	name           string
 }
 
+// Global variables used by multiple functions
 var (
-	group_map map[int]string
-	user_map  map[int]string
-	options   Options
+	user_map  map[int]string // matches uid to username
+	group_map map[int]string // matches gid to groupname
+	options   Options        // the state of all program options
 )
 
-func is_dot_name(info os.FileInfo) bool {
-	info_name_rune := []rune(info.Name())
-	return (info_name_rune[0] == rune('.'))
-}
-
+// Write the given Listing's name to the output buffer, with the appropriate
+// formatting based on the current options.
 func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
-
 	if !options.color {
 		output_buffer.WriteString(l.name)
 		return
@@ -94,8 +94,8 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 	}
 }
 
+// Convert a FileInfoPath object to a Listing.
 func create_listing(fip FileInfoPath) (Listing, error) {
-
 	var current_listing Listing
 
 	// permissions string
@@ -181,12 +181,16 @@ func create_listing(fip FileInfoPath) (Listing, error) {
 	return current_listing, nil
 }
 
+// Comparison function used for sorting Listings - simply returns -1 to indicate
+// that Listing a should come before Listing b.  Used when the Listings do not
+// need to be sorted.
 func compare_noop(a, b Listing) int {
 	return -1
 }
 
+// Comparison function used for sorting Listings by modification time, from most
+// recent to oldest.
 func compare_time(a, b Listing) int {
-	//if a.epoch_nano > b.epoch_nano {
 	if a.epoch_nano >= b.epoch_nano {
 		return -1
 	}
@@ -194,6 +198,7 @@ func compare_time(a, b Listing) int {
 	return 1
 }
 
+// Sort the given listings, taking into account the current program options.
 func sort_listings(listings []Listing) {
 	comparison_function := compare_noop
 	if options.sort_time {
@@ -239,6 +244,63 @@ func sort_listings(listings []Listing) {
 	}
 }
 
+// Create a set of Listings, comprised of the files and directories currently in
+// the given directory.
+func list_files_in_dir(dir Listing) ([]Listing, error) {
+	l := make([]Listing, 0)
+
+	if options.all {
+		//info_dot, err := os.Stat(dir.path)
+		info_dot, err := os.Stat(dir.name)
+		if err != nil {
+			return l, err
+		}
+
+		listing_dot, err := create_listing(FileInfoPath{".", info_dot})
+		if err != nil {
+			return l, err
+		}
+
+		//info_dotdot, err := os.Stat(dir.path + "/..")
+		info_dotdot, err := os.Stat(dir.name + "/..")
+		if err != nil {
+			return l, err
+		}
+
+		listing_dotdot, err := create_listing(FileInfoPath{"..", info_dotdot})
+		if err != nil {
+			return l, err
+		}
+
+		l = append(l, listing_dot)
+		l = append(l, listing_dotdot)
+	}
+
+	files_in_dir, err := ioutil.ReadDir(dir.name)
+	if err != nil {
+		return l, err
+	}
+
+	for _, f := range files_in_dir {
+		// if this is a .dotfile and '-a' is not specified, skip it
+		if []rune(f.Name())[0] == rune('.') && !options.all {
+			continue
+		}
+
+		_l, err := create_listing(FileInfoPath{f.Name(), f})
+		if err != nil {
+			return l, err
+		}
+		l = append(l, _l)
+	}
+
+	sort_listings(l)
+
+	return l, nil
+}
+
+// Given a set of Listings, print them to the output buffer, taking into account
+// the current program arguments and terminal width as necessary.
 func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	listings []Listing,
 	terminal_width int) {
@@ -250,9 +312,7 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			width_owner          int = 0
 			width_group          int = 0
 			width_size           int = 0
-			//width_month          int = 3
-			//width_day            int = 2
-			width_time int = 0
+			width_time           int = 0
 		)
 		// check max widths for each field
 		for _, l := range listings {
@@ -405,6 +465,8 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	}
 }
 
+// Parse the program arguments and write the appropriate listings to the output
+// buffer.
 func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	args_options := make([]string, 0)
 	args_files := make([]string, 0)
@@ -618,62 +680,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	return nil
 }
 
-func list_files_in_dir(dir Listing) ([]Listing, error) {
-
-	l := make([]Listing, 0)
-
-	if options.all {
-		//info_dot, err := os.Stat(dir.path)
-		info_dot, err := os.Stat(dir.name)
-		if err != nil {
-			return l, err
-		}
-
-		listing_dot, err := create_listing(FileInfoPath{".", info_dot})
-		if err != nil {
-			return l, err
-		}
-
-		//info_dotdot, err := os.Stat(dir.path + "/..")
-		info_dotdot, err := os.Stat(dir.name + "/..")
-		if err != nil {
-			return l, err
-		}
-
-		listing_dotdot, err := create_listing(FileInfoPath{"..", info_dotdot})
-		if err != nil {
-			return l, err
-		}
-
-		l = append(l, listing_dot)
-		l = append(l, listing_dotdot)
-	}
-
-	files_in_dir, err := ioutil.ReadDir(dir.name)
-	if err != nil {
-		return l, err
-	}
-
-	for _, _f := range files_in_dir {
-		if is_dot_name(_f) && !options.all {
-			continue
-		}
-
-		_l, err := create_listing(FileInfoPath{_f.Name(), _f})
-		if err != nil {
-			return l, err
-		}
-		l = append(l, _l)
-	}
-
-	sort_listings(l)
-
-	return l, nil
-}
-
-//
-// main
-//
+// Main function
 func main() {
 	// capture the current terminal dimensions
 	terminal_width, _, err := terminal.GetSize(int(os.Stdout.Fd()))
