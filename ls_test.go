@@ -698,6 +698,29 @@ func Test_t_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls -t' in a directory with files, all sharing the same
+// modification time.
+func Test_t_None_FilesSameModifyTime(t *testing.T) {
+	setup_test_dir("t_None_FilesSameModifyTime")
+
+	time_now := time.Now()
+
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0, time_now)
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 0, time_now)
+	_mkfile2("c", 0600, os.Getuid(), os.Getgid(), 0, time_now)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-t"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a b c"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -t' on multiple files and directories.
 func Test_t_FilesAndDirs_FilesAndDirs(t *testing.T) {
 	setup_test_dir("t_FilesAndDirs_FilesAndDirs")
 
