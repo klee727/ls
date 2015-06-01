@@ -495,7 +495,7 @@ func Test_l_File_File(t *testing.T) {
 
 	group := group_map[os.Getgid()]
 
-	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %d %02d:%02d %s",
+	expected := fmt.Sprintf("-rw------- 1 %s %s %d %s %02d %02d:%02d %s",
 		owner,
 		group,
 		size,
