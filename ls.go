@@ -39,6 +39,7 @@ type FileInfoPath struct {
 type Options struct {
 	all          bool
 	long         bool
+	human        bool
 	one          bool
 	dir          bool
 	color        bool
@@ -145,7 +146,51 @@ func create_listing(fip FileInfoPath) (Listing, error) {
 	}
 
 	// size
-	current_listing.size = fmt.Sprintf("%d", fip.info.Size())
+	if options.human {
+		size := float64(fip.info.Size())
+
+		count := 0
+		for size > 1.0 {
+			size /= 1024
+			count++
+		}
+
+		if count < 0 {
+			count = 0
+		} else {
+			size *= 1024
+			count--
+		}
+
+		var suffix string
+		if count == 0 {
+			suffix = "B"
+		} else if count == 1 {
+			suffix = "K"
+		} else if count == 2 {
+			suffix = "M"
+		} else if count == 3 {
+			suffix = "G"
+		} else if count == 4 {
+			suffix = "T"
+		} else if count == 5 {
+			suffix = "P"
+		} else if count == 6 {
+			suffix = "E"
+		} else {
+			suffix = "?"
+		}
+		if count == 0 {
+			size_b := int64(size)
+			current_listing.size = fmt.Sprintf("%d%s", size_b, suffix)
+		} else {
+			// looks like the printf formatting automatically rounds up
+			current_listing.size = fmt.Sprintf("%.1f%s", size, suffix)
+		}
+
+	} else {
+		current_listing.size = fmt.Sprintf("%d", fip.info.Size())
+	}
 
 	// epoch_nano
 	current_listing.epoch_nano = fip.info.ModTime().UnixNano()
@@ -570,6 +615,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			}
 			if strings.Contains(o, "d") {
 				options.dir = true
+			}
+			if strings.Contains(o, "h") {
+				options.human = true
 			}
 			if strings.Contains(o, "l") {
 				options.long = true
