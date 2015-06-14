@@ -73,26 +73,25 @@ var (
 // Write the given Listing's name to the output buffer, with the appropriate
 // formatting based on the current options.
 func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
-	if !options.color {
+	if options.color {
+		applied_color := false
+		if l.permissions[0] == 'd' {
+			output_buffer.WriteString(color_blue)
+			applied_color = true
+		} else if l.permissions[0] == 'l' {
+			output_buffer.WriteString(color_purple)
+			applied_color = true
+		} else if strings.Contains(l.permissions, "x") {
+			output_buffer.WriteString(color_red)
+			applied_color = true
+		}
+
 		output_buffer.WriteString(l.name)
-		return
-	}
-
-	applied_color := false
-	if l.permissions[0] == 'd' {
-		output_buffer.WriteString(color_blue)
-		applied_color = true
-	} else if l.permissions[0] == 'l' {
-		output_buffer.WriteString(color_purple)
-		applied_color = true
-	} else if strings.Contains(l.permissions, "x") {
-		output_buffer.WriteString(color_red)
-		applied_color = true
-	}
-
-	output_buffer.WriteString(l.name)
-	if applied_color {
-		output_buffer.WriteString(color_none)
+		if applied_color {
+			output_buffer.WriteString(color_none)
+		}
+	} else {
+		output_buffer.WriteString(l.name)
 	}
 
 	if l.permissions[0] == 'l' && options.long {
@@ -107,11 +106,17 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 
 	// permissions string
 	current_listing.permissions = fip.info.Mode().String()
-	if current_listing.permissions[0] == 'L' {
+	if fip.info.Mode()&os.ModeSymlink == os.ModeSymlink {
 		current_listing.permissions = strings.Replace(
 			current_listing.permissions, "L", "l", 1)
 
-		link, err := os.Readlink(fmt.Sprintf("%s/%s", dirname, fip.path))
+		var _pathstr string
+		if dirname == "" {
+			_pathstr = fmt.Sprintf("%s", fip.path)
+		} else {
+			_pathstr = fmt.Sprintf("%s/%s", dirname, fip.path)
+		}
+		link, err := os.Readlink(fmt.Sprintf(_pathstr))
 		if err != nil {
 			return current_listing, err
 		}
@@ -319,7 +324,6 @@ func list_files_in_dir(dir Listing) ([]Listing, error) {
 			return l, err
 		}
 
-		//info_dotdot, err := os.Stat(dir.path + "/..")
 		info_dotdot, err := os.Stat(dir.name + "/..")
 		if err != nil {
 			return l, err
@@ -648,8 +652,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 
 	// if no files are specified, list the current directory
 	if len(args_files) == 0 {
-		//this_dir, _ := os.Lstat(".")
-		this_dir, _ := os.Stat(".")
+		this_dir, _ := os.Lstat(".")
+		//this_dir, _ := os.Stat(".")
 
 		this_dir_listing, err := create_listing("",
 			FileInfoPath{".", this_dir})
@@ -669,7 +673,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	// separate the files from the directories
 	//
 	for _, f := range args_files {
-		info, err := os.Stat(f)
+		//info, err := os.Stat(f)
+		info, err := os.Lstat(f)
 
 		if err != nil && os.IsNotExist(err) {
 			return fmt.Errorf("cannot access %s: No such file or directory", f)

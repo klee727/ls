@@ -59,6 +59,16 @@ func _mkfile(path string) {
 	}
 }
 
+// create a symlink named path_linkname pointing to path_target
+func _mklink(path_target string, path_linkname string) {
+	err := os.Symlink(path_target, path_linkname)
+	if err != nil {
+		fmt.Printf("error: os.Symlink(%s, %s)\n", path_target, path_linkname)
+		fmt.Printf("\t%v\n", err)
+		os.Exit(1)
+	}
+}
+
 // Perform the necessary Chmod, Chown, and Chtimes on the given path
 func _modify_path(path string,
 	mode os.FileMode,
@@ -254,6 +264,24 @@ func Test_None_None_Files(t *testing.T) {
 	output := clean_output_buffer(output_buffer)
 
 	expected := "a b c"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls' in a directory with a file and a symlink
+func Test_None_None_Link(t *testing.T) {
+	setup_test_dir("None_None_Link")
+
+	_mkfile("a")
+	_mklink("a", "b")
+
+	var output_buffer bytes.Buffer
+	args := []string{"--nocolor"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a b"
 
 	check_output(t, output, expected)
 	check_error_nil(t, err)
@@ -499,6 +527,46 @@ func Test_l_File_File(t *testing.T) {
 		owner,
 		group,
 		size,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		path)
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls -l a' with a symlink 'b' pointing to a file 'a'
+func Test_l_File_Link(t *testing.T) {
+	setup_test_dir("l_File_Link")
+
+	time_now := time.Now()
+	size := 13
+	path := "a"
+	_mkfile2(path, 0600, os.Getuid(), os.Getgid(), size, time_now)
+
+	_mklink(path, "b")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-l", "b", "--nocolor"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
+	group := group_map[os.Getgid()]
+
+	expected := fmt.Sprintf("lrwxr-xr-x 1 %s %s 1 %s %02d %02d:%02d b -> %s",
+		owner,
+		group,
 		time_now.Month().String()[0:3],
 		time_now.Day(),
 		time_now.Hour(),
