@@ -60,6 +60,7 @@ type Listing struct {
 	day            string
 	time           string
 	name           string
+	linkname       string
 }
 
 // Global variables used by multiple functions
@@ -93,10 +94,15 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 	if applied_color {
 		output_buffer.WriteString(color_none)
 	}
+
+	if l.permissions[0] == 'l' && options.long {
+		output_buffer.WriteString(fmt.Sprintf(" -> %s", l.linkname))
+	}
 }
 
-// Convert a FileInfoPath object to a Listing.
-func create_listing(fip FileInfoPath) (Listing, error) {
+// Convert a FileInfoPath object to a Listing.  The dirname is passed for
+// following symlinks.
+func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 	var current_listing Listing
 
 	// permissions string
@@ -104,6 +110,12 @@ func create_listing(fip FileInfoPath) (Listing, error) {
 	if current_listing.permissions[0] == 'L' {
 		current_listing.permissions = strings.Replace(
 			current_listing.permissions, "L", "l", 1)
+
+		link, err := os.Readlink(fmt.Sprintf("%s/%s", dirname, fip.path))
+		if err != nil {
+			return current_listing, err
+		}
+		current_listing.linkname = link
 	}
 
 	sys := fip.info.Sys()
@@ -301,7 +313,8 @@ func list_files_in_dir(dir Listing) ([]Listing, error) {
 			return l, err
 		}
 
-		listing_dot, err := create_listing(FileInfoPath{".", info_dot})
+		listing_dot, err := create_listing(dir.name,
+			FileInfoPath{".", info_dot})
 		if err != nil {
 			return l, err
 		}
@@ -312,7 +325,8 @@ func list_files_in_dir(dir Listing) ([]Listing, error) {
 			return l, err
 		}
 
-		listing_dotdot, err := create_listing(FileInfoPath{"..", info_dotdot})
+		listing_dotdot, err := create_listing(dir.name,
+			FileInfoPath{"..", info_dotdot})
 		if err != nil {
 			return l, err
 		}
@@ -332,7 +346,8 @@ func list_files_in_dir(dir Listing) ([]Listing, error) {
 			continue
 		}
 
-		_l, err := create_listing(FileInfoPath{f.Name(), f})
+		_l, err := create_listing(dir.name,
+			FileInfoPath{f.Name(), f})
 		if err != nil {
 			return l, err
 		}
@@ -636,7 +651,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		//this_dir, _ := os.Lstat(".")
 		this_dir, _ := os.Stat(".")
 
-		this_dir_listing, err := create_listing(FileInfoPath{".", this_dir})
+		this_dir_listing, err := create_listing("",
+			FileInfoPath{".", this_dir})
 		if err != nil {
 			return err
 		}
@@ -661,7 +677,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			return err
 		}
 
-		f_listing, err := create_listing(FileInfoPath{f, info})
+		f_listing, err := create_listing("",
+			FileInfoPath{f, info})
 		if err != nil {
 			return err
 		}
@@ -705,7 +722,10 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		for _, d := range list_dirs {
 			output_buffer.WriteString(d.name + ":\n")
 
-			listings, _ := list_files_in_dir(d)
+			listings, err := list_files_in_dir(d)
+			if err != nil {
+				return err
+			}
 
 			if len(listings) > 0 {
 				write_listings_to_buffer(output_buffer,
@@ -721,7 +741,10 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	} else if num_dirs == 1 {
 		for _, d := range list_dirs {
 
-			listings, _ := list_files_in_dir(d)
+			listings, err := list_files_in_dir(d)
+			if err != nil {
+				return err
+			}
 
 			write_listings_to_buffer(output_buffer,
 				listings,
