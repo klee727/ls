@@ -798,4 +798,154 @@ func Test_rt_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls -h' in an empty directory.
+func Test_h_None_None(t *testing.T) {
+	setup_test_dir("h_None_None")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-h"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := ""
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -h' in a directory with one file.
+func Test_h_None_File(t *testing.T) {
+	setup_test_dir("h_None_File")
+
+	_mkfile("a")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-h"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test running 'ls -lh' with a single 13-byte 'a' file in the current
+// directory.
+func Test_lh_None_File(t *testing.T) {
+	setup_test_dir("lh_None_File")
+
+	time_now := time.Now()
+	size := 13
+	path := "a"
+	_mkfile2(path, 0600, os.Getuid(), os.Getgid(), size, time_now)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-lh"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
+	group := group_map[os.Getgid()]
+
+	expected := fmt.Sprintf("-rw------- 1 %s %s %dB %s %02d %02d:%02d %s",
+		owner,
+		group,
+		size,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		path)
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls -lh' with a single 1024-byte (1.0K) 'a' file in the current
+// directory.
+func Test_lh_None_File2(t *testing.T) {
+	setup_test_dir("lh_None_File2")
+
+	time_now := time.Now()
+	size := 1024
+	path := "a"
+	_mkfile2(path, 0600, os.Getuid(), os.Getgid(), size, time_now)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-lh"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
+	group := group_map[os.Getgid()]
+
+	expected := fmt.Sprintf("-rw------- 1 %s %s 1.0K %s %02d %02d:%02d %s",
+		owner,
+		group,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		path)
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls -lh' with a single 1485-byte (1.45K) 'a' file in the current
+// directory.
+func Test_lh_None_File3(t *testing.T) {
+	setup_test_dir("lh_None_File3")
+
+	time_now := time.Now()
+	size := 1485
+	path := "a"
+	_mkfile2(path, 0600, os.Getuid(), os.Getgid(), size, time_now)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-lh"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
+	group := group_map[os.Getgid()]
+
+	expected := fmt.Sprintf("-rw------- 1 %s %s 1.5K %s %02d %02d:%02d %s",
+		owner,
+		group,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		path)
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80

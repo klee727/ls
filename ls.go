@@ -150,7 +150,7 @@ func create_listing(fip FileInfoPath) (Listing, error) {
 		size := float64(fip.info.Size())
 
 		count := 0
-		for size > 1.0 {
+		for size >= 1.0 {
 			size /= 1024
 			count++
 		}
