@@ -579,6 +579,67 @@ func Test_l_File_Link(t *testing.T) {
 	check_error_nil(t, ls_err)
 }
 
+// Test running 'ls -l' with a symlink 'b' pointing to a file 'a'
+func Test_l_File_Link2(t *testing.T) {
+	setup_test_dir("l_File_Link2")
+
+	time_now := time.Now()
+	size := 13
+	path := "a"
+	_mkfile2(path, 0600, os.Getuid(), os.Getgid(), size, time_now)
+
+	_mklink(path, "b")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-l", "--nocolor"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	// remove the permissions string from each file listing
+	output_line_split := strings.Split(output, "\n")
+	output_noperms := ""
+	for _, l := range output_line_split {
+		output_line_split_noperms := strings.Split(l, " ")[1:]
+		output_line_noperms := strings.Join(output_line_split_noperms, " ")
+		if len(output_noperms) == 0 {
+			output_noperms = output_line_noperms
+		} else {
+			output_noperms = output_noperms + "\n" + output_line_noperms
+		}
+	}
+
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
+	group := group_map[os.Getgid()]
+
+	expected := fmt.Sprintf(
+		"1 %s %s %d %s %02d %02d:%02d a\n1 %s %s 1 %s %02d %02d:%02d b -> %s",
+		owner,
+		group,
+		size,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		owner,
+		group,
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		path)
+
+	check_output(t, output_noperms, expected)
+	check_error_nil(t, ls_err)
+}
+
 // Test running 'ls -d' in an empty directory
 func Test_d_None_Empty(t *testing.T) {
 	setup_test_dir("d_None_Empty")
