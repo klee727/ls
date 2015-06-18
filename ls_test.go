@@ -801,12 +801,12 @@ func Test_t_FilesAndDirs_FilesAndDirs(t *testing.T) {
 	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0,
 		time_now.Add(-5*time.Second))
 
-	_mkdir2("dir0", 0755, os.Getuid(), os.Getgid(), time_now)
+	_mkdir("dir0")
 	_mkfile2("dir0/minus_one", 0600, os.Getuid(), os.Getgid(), 0,
 		time_now.Add(-1*time.Second))
 	_mkfile2("dir0/zero", 0600, os.Getuid(), os.Getgid(), 0, time_now)
 
-	_mkdir2("dir2", 0755, os.Getuid(), os.Getgid(), time_now.Add(-2*time.Second))
+	_mkdir("dir2")
 	_mkfile2("dir2/e", 0600, os.Getuid(), os.Getgid(), 0,
 		time_now)
 	_mkfile2("dir2/b", 0600, os.Getuid(), os.Getgid(), 0,
@@ -820,7 +820,23 @@ func Test_t_FilesAndDirs_FilesAndDirs(t *testing.T) {
 	_mkfile2("dir2/a", 0600, os.Getuid(), os.Getgid(), 0,
 		time_now.Add(-5*time.Second))
 
-	_mkdir2("dir1", 0755, os.Getuid(), os.Getgid(), time_now.Add(-5*time.Second))
+	_mkdir("dir1")
+
+	_modify_path("dir0",
+		0755,
+		os.Getuid(),
+		os.Getgid(),
+		time_now)
+	_modify_path("dir1",
+		0755,
+		os.Getuid(),
+		os.Getgid(),
+		time_now.Add(-5*time.Second))
+	_modify_path("dir2",
+		0755,
+		os.Getuid(),
+		os.Getgid(),
+		time_now.Add(-2*time.Second))
 
 	var output_buffer bytes.Buffer
 	args := []string{"-t", "a", "b", "dir0", "dir1", "dir2"}
