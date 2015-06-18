@@ -553,6 +553,8 @@ func Test_l_File_Link(t *testing.T) {
 	ls_err := ls(&output_buffer, args, tw)
 
 	output := clean_output_buffer(output_buffer)
+	// remove the permissions string from the output
+	output_noperms := strings.Join(strings.Split(output, " ")[1:], " ")
 
 	var owner string
 	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
@@ -564,7 +566,7 @@ func Test_l_File_Link(t *testing.T) {
 
 	group := group_map[os.Getgid()]
 
-	expected := fmt.Sprintf("lrwxr-xr-x 1 %s %s 1 %s %02d %02d:%02d b -> %s",
+	expected := fmt.Sprintf("1 %s %s 1 %s %02d %02d:%02d b -> %s",
 		owner,
 		group,
 		time_now.Month().String()[0:3],
@@ -573,7 +575,7 @@ func Test_l_File_Link(t *testing.T) {
 		time_now.Minute(),
 		path)
 
-	check_output(t, output, expected)
+	check_output(t, output_noperms, expected)
 	check_error_nil(t, ls_err)
 }
 
