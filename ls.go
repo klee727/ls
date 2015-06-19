@@ -45,6 +45,7 @@ type Options struct {
 	color        bool
 	sort_reverse bool
 	sort_time    bool
+	sort_size    bool
 }
 
 // Listings contain all the information about a file or directory in a printable
@@ -260,11 +261,26 @@ func compare_time(a, b Listing) int {
 	return 1
 }
 
+// Comparison function used for sorting Listings by size, from largest to
+// smallest.
+func compare_size(a, b Listing) int {
+	a_size, _ := strconv.Atoi(a.size)
+	b_size, _ := strconv.Atoi(b.size)
+
+	if a_size >= b_size {
+		return -1
+	}
+
+	return 1
+}
+
 // Sort the given listings, taking into account the current program options.
 func sort_listings(listings []Listing) {
 	comparison_function := compare_noop
 	if options.sort_time {
 		comparison_function = compare_time
+	} else if options.sort_size {
+		comparison_function = compare_size
 	}
 
 	for {
@@ -646,6 +662,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			}
 			if strings.Contains(o, "t") {
 				options.sort_time = true
+			}
+			if strings.Contains(o, "S") {
+				options.sort_size = true
 			}
 		}
 	}
