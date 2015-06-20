@@ -1095,4 +1095,79 @@ func Test_lh_None_File3(t *testing.T) {
 	check_error_nil(t, ls_err)
 }
 
+// Test running 'ls -S' in an empty directory.
+func Test_S_None_None(t *testing.T) {
+	setup_test_dir("S_None_None")
+
+	var output_buffer bytes.Buffer
+	args := []string{"-S"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := ""
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls -S' in a directory with two files of the same size.
+func Test_S_None_Files(t *testing.T) {
+	setup_test_dir("S_None_Files")
+
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 5, time.Now())
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 5, time.Now())
+
+	var output_buffer bytes.Buffer
+	args := []string{"-S"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a b"
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls -S' in a directory with files of the differing sizes.
+func Test_S_None_Files2(t *testing.T) {
+	setup_test_dir("S_None_Files2")
+
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0, time.Now())
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 5, time.Now())
+	_mkfile2("c", 0600, os.Getuid(), os.Getgid(), 2, time.Now())
+
+	var output_buffer bytes.Buffer
+	args := []string{"-S"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := "b c a"
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls -rS' in a directory with files of the differing sizes.
+func Test_rS_None_Files(t *testing.T) {
+	setup_test_dir("rS_None_Files")
+
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 0, time.Now())
+	_mkfile2("b", 0600, os.Getuid(), os.Getgid(), 5, time.Now())
+	_mkfile2("c", 0600, os.Getuid(), os.Getgid(), 2, time.Now())
+
+	var output_buffer bytes.Buffer
+	args := []string{"-rS"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a c b"
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
