@@ -1017,7 +1017,7 @@ func Test_lh_None_File(t *testing.T) {
 	check_error_nil(t, ls_err)
 }
 
-// Test running 'ls -lh' with a single 1024-byte (1.0K) 'a' file in the current
+// Test running 'ls -lh' with a single 1024-byte (1K) 'a' file in the current
 // directory.
 func Test_lh_None_File2(t *testing.T) {
 	setup_test_dir("lh_None_File2")
@@ -1043,7 +1043,7 @@ func Test_lh_None_File2(t *testing.T) {
 
 	group := group_map[os.Getgid()]
 
-	expected := fmt.Sprintf("-rw------- 1 %s %s 1.0K %s %02d %02d:%02d %s",
+	expected := fmt.Sprintf("-rw------- 1 %s %s 1K %s %02d %02d:%02d %s",
 		owner,
 		group,
 		time_now.Month().String()[0:3],

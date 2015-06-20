@@ -198,13 +198,24 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 		} else {
 			suffix = "?"
 		}
+
+		size_str := ""
 		if count == 0 {
 			size_b := int64(size)
-			current_listing.size = fmt.Sprintf("%d%s", size_b, suffix)
+			size_str = fmt.Sprintf("%d%s", size_b, suffix)
 		} else {
 			// looks like the printf formatting automatically rounds up
-			current_listing.size = fmt.Sprintf("%.1f%s", size, suffix)
+			size_str = fmt.Sprintf("%.1f%s", size, suffix)
 		}
+
+		// drop the trailing .0 if it exists in the size
+		// e.g. 14.0K -> 14K
+		if len(size_str) > 3 &&
+			size_str[len(size_str)-3:len(size_str)-1] == ".0" {
+			size_str = size_str[0:len(size_str)-3] + suffix
+		}
+
+		current_listing.size = size_str
 
 	} else {
 		current_listing.size = fmt.Sprintf("%d", fip.info.Size())
