@@ -175,7 +175,7 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 
 		if count < 0 {
 			count = 0
-		} else {
+		} else if count > 0 {
 			size *= 1024
 			count--
 		}
