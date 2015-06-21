@@ -255,11 +255,33 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 	return current_listing, nil
 }
 
-// Comparison function used for sorting Listings - simply returns -1 to indicate
-// that Listing a should come before Listing b.  Used when the Listings do not
-// need to be sorted.
-func compare_noop(a, b Listing) int {
-	return -1
+// Comparison function used for sorting Listings by name.
+func compare_name(a, b Listing) int {
+	a_name_lower := strings.ToLower(a.name)
+	b_name_lower := strings.ToLower(b.name)
+
+	var smaller_len int
+	if len(a.name) < len(b.name) {
+		smaller_len = len(a.name)
+	} else {
+		smaller_len = len(b.name)
+	}
+
+	for i := 0; i < smaller_len; i++ {
+		if a_name_lower[i] < b_name_lower[i] {
+			return -1
+		} else if a_name_lower[i] > b_name_lower[i] {
+			return 1
+		}
+	}
+
+	if len(a.name) < len(b.name) {
+		return -1
+	} else if len(b.name) < len(a.name) {
+		return 1
+	} else {
+		return 0
+	}
 }
 
 // Comparison function used for sorting Listings by modification time, from most
@@ -287,7 +309,7 @@ func compare_size(a, b Listing) int {
 
 // Sort the given listings, taking into account the current program options.
 func sort_listings(listings []Listing) {
-	comparison_function := compare_noop
+	comparison_function := compare_name
 	if options.sort_time {
 		comparison_function = compare_time
 	} else if options.sort_size {

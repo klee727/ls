@@ -269,6 +269,26 @@ func Test_None_None_Files(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test running 'ls' in a directory with files names of mixed case--check that
+// case does not disrupt the default alphabetic sorting
+func Test_None_None_Files2(t *testing.T) {
+	setup_test_dir("None_None_Files2")
+
+	_mkfile("a")
+	_mkfile("B")
+	_mkfile("c")
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a B c"
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
 // Test running 'ls' in a directory with a file and a symlink
 func Test_None_None_Link(t *testing.T) {
 	setup_test_dir("None_None_Link")
