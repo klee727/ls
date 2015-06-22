@@ -47,6 +47,7 @@ type Options struct {
 	sort_time    bool
 	sort_size    bool
 	help         bool
+	dirs_first   bool
 }
 
 // Listings contain all the information about a file or directory in a printable
@@ -254,6 +255,26 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 	current_listing.name = fip.path
 
 	return current_listing, nil
+}
+
+// Given a slice of listings, return a new slice of listings with the
+// directories at the front of the slice, followed by the other listings.
+func sort_listings_dirs_first(listings []Listing) []Listing {
+
+	listings_sorted := make([]Listing, 0)
+
+	for _, l := range listings {
+		if l.permissions[0] == 'd' {
+			listings_sorted = append(listings_sorted, l)
+		}
+	}
+	for _, l := range listings {
+		if l.permissions[0] != 'd' {
+			listings_sorted = append(listings_sorted, l)
+		}
+	}
+
+	return listings_sorted
 }
 
 // Comparison function used for sorting Listings by name.
@@ -672,6 +693,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 
 		// is it a short option '-' or a long option '--'?
 		if strings.Contains(o, "--") {
+			if strings.Contains(o, "--dirs-first") {
+				options.dirs_first = true
+			}
 			if strings.Contains(o, "--help") {
 				options.help = true
 			}
@@ -709,16 +733,17 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	if options.help {
 		help_str := "usage:  ls [OPTIONS] [FILES]\n\n" +
 			"OPTIONS:\n" +
-			"    --help       display usage information\n" +
-			"    --nocolor    remove color formatting\n" +
-			"    -1           one entry per line\n" +
-			"    -a           include entries starting with '.'\n" +
-			"    -d           list directories like files\n" +
-			"    -h           list sizes with human-readable units\n" +
-			"    -l           long listing\n" +
-			"    -r           reverse any sorting\n" +
-			"    -t           sort entries by modify time\n" +
-			"    -S           sort entries by size"
+			"    --dirs-first  list the directories first\n" +
+			"    --help        display usage information\n" +
+			"    --nocolor     remove color formatting\n" +
+			"    -1            one entry per line\n" +
+			"    -a            include entries starting with '.'\n" +
+			"    -d            list directories like files\n" +
+			"    -h            list sizes with human-readable units\n" +
+			"    -l            long listing\n" +
+			"    -r            reverse any sorting\n" +
+			"    -t            sort entries by modify time\n" +
+			"    -S            sort entries by size"
 		output_buffer.WriteString(help_str)
 		return nil
 	}
@@ -781,9 +806,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	sort_listings(list_dirs)
 
 	//
-	// list the files first
+	// list the files first (unless --dirs-first)
 	//
-	if num_files > 0 {
+	if num_files > 0 && !options.dirs_first {
 		write_listings_to_buffer(output_buffer,
 			list_files,
 			width)
@@ -805,6 +830,10 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				return err
 			}
 
+			if options.dirs_first {
+				listings = sort_listings_dirs_first(listings)
+			}
+
 			if len(listings) > 0 {
 				write_listings_to_buffer(output_buffer,
 					listings,
@@ -824,10 +853,23 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				return err
 			}
 
+			if options.dirs_first {
+				listings = sort_listings_dirs_first(listings)
+			}
+
 			write_listings_to_buffer(output_buffer,
 				listings,
 				width)
 		}
+	}
+
+	//
+	// list the files now if --dirs-first
+	//
+	if num_files > 0 && options.dirs_first {
+		write_listings_to_buffer(output_buffer,
+			list_files,
+			width)
 	}
 
 	return nil
