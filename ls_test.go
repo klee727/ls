@@ -1190,4 +1190,89 @@ func Test_rS_None_Files(t *testing.T) {
 	check_error_nil(t, ls_err)
 }
 
+// Test running 'ls --dirs-first' in an empty directory
+func Test_dirsfirst_None_None(t *testing.T) {
+	setup_test_dir("dirsfirst_None_None")
+
+	var output_buffer bytes.Buffer
+	args := []string{"--dirs-first"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := ""
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls --dirs-first' in a directory with files
+func Test_dirsfirst_None_Files(t *testing.T) {
+	setup_test_dir("dirsfirst_None_Files")
+
+	_mkfile("a")
+	_mkfile("b")
+	_mkfile("c")
+
+	var output_buffer bytes.Buffer
+	args := []string{"--dirs-first"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := "a b c"
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls --dirs-first' in a directory with files and directories
+func Test_dirsfirst_None_FilesAndDirs(t *testing.T) {
+	setup_test_dir("dirsfirst_None_FilesAndDirs")
+
+	_mkfile("a")
+	_mkdir("b")
+	_mkfile("c")
+	_mkdir("d")
+
+	var output_buffer bytes.Buffer
+	args := []string{"--dirs-first", "--nocolor"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := "b d a c"
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
+// Test running 'ls --dirs-first *' in a directory with nested files and
+// directories
+func Test_dirsfirst_FilesAndDirs_FilesAndDirs(t *testing.T) {
+	setup_test_dir("dirsfirst_FilesAndDirs_FilesAndDirs")
+
+	_mkfile("a")
+	_mkfile("b")
+	_mkfile("c")
+
+	_mkdir("dir1")
+	_mkfile("dir1/e")
+	_mkdir("dir1/f")
+	_mkfile("dir1/g")
+
+	var output_buffer bytes.Buffer
+	args := []string{"--dirs-first", "--nocolor", "a", "b", "c", "dir1"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+
+	expected := "dir1:\n" +
+		"f e g\n\n" +
+		"a b c"
+
+	check_output(t, output, expected)
+	check_error_nil(t, ls_err)
+}
+
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
