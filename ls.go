@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/user"
 	"strconv"
@@ -550,7 +551,9 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 		num_rows := 1
 		var col_widths []int
 		for {
-			num_cols := len(listings)/num_rows + len(listings)%num_rows
+			num_cols_float := float64(len(listings)) / float64(num_rows)
+			num_cols_float = math.Ceil(num_cols_float)
+			num_cols := int(num_cols_float)
 
 			col_widths = make([]int, num_cols)
 			for i, _ := range col_widths {
