@@ -733,7 +733,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	if options.help {
 		help_str := "usage:  ls [OPTIONS] [FILES]\n\n" +
 			"OPTIONS:\n" +
-			"    --dirs-first  list the directories first\n" +
+			"    --dirs-first  list directories first\n" +
 			"    --help        display usage information\n" +
 			"    --nocolor     remove color formatting\n" +
 			"    -1            one entry per line\n" +
@@ -818,7 +818,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	// then list the directories
 	//
 	if (num_files > 0 && num_dirs > 0) || (num_dirs > 1) {
-		if num_files > 0 {
+		if num_files > 0 && !options.dirs_first {
 			output_buffer.WriteString("\n\n")
 		}
 
@@ -867,6 +867,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	// list the files now if --dirs-first
 	//
 	if num_files > 0 && options.dirs_first {
+		output_buffer.WriteString("\n\n")
 		write_listings_to_buffer(output_buffer,
 			list_files,
 			width)
