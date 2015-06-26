@@ -441,6 +441,10 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 	listings []Listing,
 	terminal_width int) {
 
+	if len(listings) == 0 {
+		return
+	}
+
 	if options.long {
 		var (
 			width_permissions    int = 0
