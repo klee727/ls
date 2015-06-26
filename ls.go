@@ -560,12 +560,19 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 				col_widths[i] = 0
 			}
 
+			col_listings := make([]int, num_cols)
+			for i := 0; i < len(col_listings); i++ {
+				col_listings[i] = 0
+			}
+
 			// calculate necessary column widths
+			// also calculate the number of listings per column
 			for i := 0; i < len(listings); i++ {
 				col := i / num_rows
 				if col_widths[col] < len(listings[i].name) {
 					col_widths[col] = len(listings[i].name)
 				}
+				col_listings[col]++
 			}
 
 			// calculate the maximum width of each row
@@ -580,7 +587,15 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 			} else if max_row_length > terminal_width {
 				num_rows++
 			} else {
-				break
+				listings_in_first_col := col_listings[0]
+				listings_in_last_col := col_listings[len(col_listings)-1]
+
+				// prevent short last (right-hand) columns
+				if listings_in_last_col <= listings_in_first_col/2 {
+					num_rows++
+				} else {
+					break
+				}
 			}
 		}
 
