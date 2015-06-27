@@ -889,7 +889,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 	// list the files now if --dirs-first
 	//
 	if num_files > 0 && options.dirs_first {
-		output_buffer.WriteString("\n\n")
+		if num_dirs > 0 {
+			output_buffer.WriteString("\n\n")
+		}
 		write_listings_to_buffer(output_buffer,
 			list_files,
 			width)
