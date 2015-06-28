@@ -17,14 +17,14 @@ import (
 
 // Base set of color codes for colorized output
 const (
-	color_black  = "\x1b[0;30m"
-	color_red    = "\x1b[0;31m"
-	color_green  = "\x1b[0;32m"
-	color_brown  = "\x1b[0;33m"
-	color_blue   = "\x1b[0;34m"
-	color_purple = "\x1b[0;35m"
-	color_cyan   = "\x1b[0;36m"
-	color_none   = "\x1b[0m"
+	color_black   = 30
+	color_red     = 31
+	color_green   = 32
+	color_brown   = 33
+	color_blue    = 34
+	color_magenta = 35
+	color_cyan    = 36
+	color_white   = 37
 )
 
 // This a FileInfo paired with the original path as passed in to the program.
@@ -69,30 +69,115 @@ type Listing struct {
 
 // Global variables used by multiple functions
 var (
-	user_map  map[int]string // matches uid to username
-	group_map map[int]string // matches gid to groupname
-	options   Options        // the state of all program options
+	user_map  map[int]string    // matches uid to username
+	group_map map[int]string    // matches gid to groupname
+	color_map map[string]string // matches file specification to output color
+	options   Options           // the state of all program options
 )
+
+// Helper function for get_color_from_bsd_code.  Given a flag to indicate
+// foreground/background and a single letter, return the correct partial ASCII
+// color code.
+func get_partial_color(foreground bool, letter uint8) string {
+	var partial_bytes bytes.Buffer
+
+	if foreground && letter == 'x' {
+		partial_bytes.WriteString("0;")
+	} else if !foreground && letter != 'x' {
+		partial_bytes.WriteString(";")
+	}
+
+	if letter == 'a' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_black))
+	} else if letter == 'b' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_red))
+	} else if letter == 'c' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_green))
+	} else if letter == 'd' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_brown))
+	} else if letter == 'e' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_blue))
+	} else if letter == 'f' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_magenta))
+	} else if letter == 'g' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_cyan))
+	} else if letter == 'h' {
+		partial_bytes.WriteString("0;")
+		partial_bytes.WriteString(strconv.Itoa(color_white))
+	} else if letter == 'A' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_black))
+	} else if letter == 'B' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_red))
+	} else if letter == 'C' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_green))
+	} else if letter == 'D' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_brown))
+	} else if letter == 'E' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_blue))
+	} else if letter == 'F' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_magenta))
+	} else if letter == 'G' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_cyan))
+	} else if letter == 'H' {
+		partial_bytes.WriteString("1;")
+		partial_bytes.WriteString(strconv.Itoa(color_white))
+	}
+
+	return partial_bytes.String()
+}
+
+// Given a BSD LSCOLORS code like "ex", return the proper ASCII code
+// (like "\x1b[0;32m")
+func get_color_from_bsd_code(code string) string {
+	color_foreground := code[0]
+	color_background := code[1]
+
+	var color_bytes bytes.Buffer
+	color_bytes.WriteString("\x1b[")
+	color_bytes.WriteString(get_partial_color(true, color_foreground))
+	color_bytes.WriteString(get_partial_color(false, color_background))
+	color_bytes.WriteString("m")
+
+	return color_bytes.String()
+}
 
 // Write the given Listing's name to the output buffer, with the appropriate
 // formatting based on the current options.
 func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
+
+	color_end_str := "\x1b[0m"
+
 	if options.color {
 		applied_color := false
-		if l.permissions[0] == 'd' {
-			output_buffer.WriteString(color_blue)
+
+		if l.permissions[0] == 'd' { // directory
+			output_buffer.WriteString(color_map["directory"])
 			applied_color = true
-		} else if l.permissions[0] == 'l' {
-			output_buffer.WriteString(color_purple)
+		} else if l.permissions[0] == 'l' { // symlink
+			output_buffer.WriteString(color_map["symlink"])
 			applied_color = true
-		} else if strings.Contains(l.permissions, "x") {
-			output_buffer.WriteString(color_red)
+		} else if strings.Contains(l.permissions, "x") { // executable
+			output_buffer.WriteString(color_map["executable"])
 			applied_color = true
 		}
 
 		output_buffer.WriteString(l.name)
 		if applied_color {
-			output_buffer.WriteString(color_none)
+			output_buffer.WriteString(color_end_str)
 		}
 	} else {
 		output_buffer.WriteString(l.name)
@@ -595,7 +680,8 @@ func write_listings_to_buffer(output_buffer *bytes.Buffer,
 				listings_in_last_col := col_listings[len(col_listings)-1]
 
 				// prevent short last (right-hand) columns
-				if listings_in_last_col <= listings_in_first_col/2 {
+				if listings_in_last_col <= listings_in_first_col/2 &&
+					listings_in_first_col-listings_in_last_col >= 5 {
 					num_rows++
 				} else {
 					break
@@ -768,6 +854,60 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 			"    -S            sort entries by size"
 		output_buffer.WriteString(help_str)
 		return nil
+	}
+
+	//
+	// determine color output
+	//
+
+	if options.color {
+		color_map = make(map[string]string)
+		LS_COLORS := os.Getenv("LS_COLORS")
+		LSCOLORS := os.Getenv("LSCOLORS")
+
+		if LSCOLORS != "" {
+			// parse LSCOLORS
+			for i := 0; i < len(LSCOLORS); i += 2 {
+				if i == 0 {
+					color_map["directory"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 2 {
+					color_map["symlink"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 4 {
+					color_map["socket"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 6 {
+					color_map["pipe"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 8 {
+					color_map["executable"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 10 {
+					color_map["block"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 12 {
+					color_map["character"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 14 {
+					color_map["executable_suid"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 16 {
+					color_map["executable_guid"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 18 {
+					color_map["directory_o+w_sticky"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				} else if i == 20 {
+					color_map["directory_o+w"] =
+						get_color_from_bsd_code(LSCOLORS[i : i+2])
+				}
+			}
+		} else if LS_COLORS != "" {
+			//fmt.Printf("LS_COLORS = %s\n", LS_COLORS)
+		} else {
+			//fmt.Printf("using default colors\n")
+		}
 	}
 
 	// if no files are specified, list the current directory
