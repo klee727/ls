@@ -17,14 +17,22 @@ import (
 
 // Base set of color codes for colorized output
 const (
-	color_black   = 30
-	color_red     = 31
-	color_green   = 32
-	color_brown   = 33
-	color_blue    = 34
-	color_magenta = 35
-	color_cyan    = 36
-	color_white   = 37
+	color_fg_black   = 30
+	color_fg_red     = 31
+	color_fg_green   = 32
+	color_fg_brown   = 33
+	color_fg_blue    = 34
+	color_fg_magenta = 35
+	color_fg_cyan    = 36
+	color_fg_white   = 37
+	color_bg_black   = 40
+	color_bg_red     = 41
+	color_bg_green   = 42
+	color_bg_brown   = 43
+	color_bg_blue    = 44
+	color_bg_magenta = 45
+	color_bg_cyan    = 46
+	color_bg_white   = 47
 )
 
 // This a FileInfo paired with the original path as passed in to the program.
@@ -65,6 +73,10 @@ type Listing struct {
 	time           string
 	name           string
 	linkname       string
+	is_socket      bool
+	is_pipe        bool
+	is_block       bool
+	is_character   bool
 }
 
 // Global variables used by multiple functions
@@ -87,54 +99,76 @@ func get_partial_color(foreground bool, letter uint8) string {
 		partial_bytes.WriteString(";")
 	}
 
+	if foreground && letter >= 97 && letter <= 122 {
+		partial_bytes.WriteString("0;")
+	} else if foreground && letter >= 65 && letter <= 90 {
+		partial_bytes.WriteString("1;")
+	}
+
 	if letter == 'a' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_black))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_black))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_black))
+		}
 	} else if letter == 'b' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_red))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_red))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_red))
+		}
 	} else if letter == 'c' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_green))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_green))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_green))
+		}
 	} else if letter == 'd' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_brown))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_brown))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_brown))
+		}
 	} else if letter == 'e' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_blue))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_blue))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_blue))
+		}
 	} else if letter == 'f' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_magenta))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_magenta))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_magenta))
+		}
 	} else if letter == 'g' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_cyan))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_cyan))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_cyan))
+		}
 	} else if letter == 'h' {
-		partial_bytes.WriteString("0;")
-		partial_bytes.WriteString(strconv.Itoa(color_white))
+		if foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_fg_white))
+		} else if !foreground {
+			partial_bytes.WriteString(strconv.Itoa(color_bg_white))
+		}
 	} else if letter == 'A' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_black))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_black))
 	} else if letter == 'B' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_red))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_red))
 	} else if letter == 'C' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_green))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_green))
 	} else if letter == 'D' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_brown))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_brown))
 	} else if letter == 'E' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_blue))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_blue))
 	} else if letter == 'F' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_magenta))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_magenta))
 	} else if letter == 'G' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_cyan))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_cyan))
 	} else if letter == 'H' {
-		partial_bytes.WriteString("1;")
-		partial_bytes.WriteString(strconv.Itoa(color_white))
+		partial_bytes.WriteString(strconv.Itoa(color_fg_white))
 	}
 
 	return partial_bytes.String()
@@ -172,6 +206,18 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 			applied_color = true
 		} else if strings.Contains(l.permissions, "x") { // executable
 			output_buffer.WriteString(color_map["executable"])
+			applied_color = true
+		} else if l.is_socket { // socket
+			output_buffer.WriteString(color_map["socket"])
+			applied_color = true
+		} else if l.is_pipe { // pipe
+			output_buffer.WriteString(color_map["pipe"])
+			applied_color = true
+		} else if l.is_block { // block
+			output_buffer.WriteString(color_map["block"])
+			applied_color = true
+		} else if l.is_character { // character
+			output_buffer.WriteString(color_map["character"])
 			applied_color = true
 		}
 
@@ -339,6 +385,17 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 	current_listing.time = time_str
 
 	current_listing.name = fip.path
+
+	// character?
+	if fip.info.Mode()&os.ModeCharDevice == os.ModeCharDevice {
+		current_listing.is_character = true
+	} else if fip.info.Mode()&os.ModeDevice == os.ModeDevice { // block?
+		current_listing.is_block = true
+	} else if fip.info.Mode()&os.ModeNamedPipe == os.ModeNamedPipe { // pipe?
+		current_listing.is_pipe = true
+	} else if fip.info.Mode()&os.ModeSocket == os.ModeSocket { // socket?
+		current_listing.is_socket = true
+	}
 
 	return current_listing, nil
 }
