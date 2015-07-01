@@ -193,8 +193,6 @@ func get_color_from_bsd_code(code string) string {
 // formatting based on the current options.
 func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 
-	color_end_str := "\x1b[0m"
-
 	if options.color {
 		applied_color := false
 
@@ -236,7 +234,7 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 
 		output_buffer.WriteString(l.name)
 		if applied_color {
-			output_buffer.WriteString(color_end_str)
+			output_buffer.WriteString(color_map["end"])
 		}
 	} else {
 		output_buffer.WriteString(l.name)
@@ -958,6 +956,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 
 	if options.color {
 		color_map = make(map[string]string)
+		color_map["end"] = "\x1b[0m"
+
 		LS_COLORS := os.Getenv("LS_COLORS")
 		LSCOLORS := os.Getenv("LSCOLORS")
 

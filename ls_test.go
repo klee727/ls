@@ -18,6 +18,8 @@ var test_root string
 // default terminal width
 const tw = 80
 
+const default_LSCOLORS = "exfxcxdxbxegedabagacad"
+
 // change directory to the given path
 func _cd(path string) {
 	err := os.Chdir(path)
@@ -306,25 +308,6 @@ func Test_None_None_Link(t *testing.T) {
 	check_output(t, output, expected)
 	check_error_nil(t, err)
 }
-
-// Test running 'ls' in a directory containing a directory, and ensure that the
-// directory's name is in color
-// TODO:  need to rework this test to use LSCOLORS and LS_COLORS
-/*func Test_None_None_Dir(t *testing.T) {
-	setup_test_dir("None_None_Dir")
-
-	_mkdir("test_dir")
-
-	var output_buffer bytes.Buffer
-	args := []string{}
-	err := ls(&output_buffer, args, tw)
-	output := clean_output_buffer(output_buffer)
-
-	expected := fmt.Sprintf("%stest_dir%s", color_blue, color_none)
-
-	check_output(t, output, expected)
-	check_error_nil(t, err)
-}*/
 
 // Test running 'ls' in a directory with .files
 func Test_None_None_DotFiles(t *testing.T) {
@@ -1274,6 +1257,122 @@ func Test_dirsfirst_FilesAndDirs_FilesAndDirs(t *testing.T) {
 
 	check_output(t, output, expected)
 	check_error_nil(t, ls_err)
+}
+
+// -------------------------------COLOR TESTS-----------------------------------
+
+//
+// LSCOLORS
+//
+
+// Test LSCOLORS directory color
+func Test_LSCOLORS_Dir(t *testing.T) {
+	setup_test_dir("LSCOLORS_Dir")
+
+	_mkdir("test_dir")
+
+	os.Setenv("LSCOLORS", default_LSCOLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("%stest_dir%s",
+		color_map["directory"],
+		color_map["end"])
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test LSCOLORS world-writeable directory color
+func Test_LSCOLORS_ow_Dir(t *testing.T) {
+	setup_test_dir("LSCOLORS_ow_Dir")
+
+	_mkdir2("test_dir", 0777, os.Getuid(), os.Getuid(), time.Now())
+
+	os.Setenv("LSCOLORS", default_LSCOLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("%stest_dir%s",
+		color_map["directory_o+w"],
+		color_map["end"])
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test LSCOLORS world-writeable, sticky-bit directory color
+func Test_LSCOLORS_ow_sticky_Dir(t *testing.T) {
+	setup_test_dir("LSCOLORS_ow_sticky_Dir")
+
+	_mkdir2("test_dir",
+		0777|os.ModeSticky,
+		os.Getuid(),
+		os.Getuid(),
+		time.Now())
+
+	os.Setenv("LSCOLORS", default_LSCOLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("%stest_dir%s",
+		color_map["directory_o+w_sticky"],
+		color_map["end"])
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test LSCOLORS symlink color
+func Test_LSCOLORS_symlink(t *testing.T) {
+	setup_test_dir("LSCOLORS_symlink")
+
+	_mkfile("a")
+	_mklink("a", "b")
+
+	os.Setenv("LSCOLORS", default_LSCOLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("a %sb%s",
+		color_map["symlink"],
+		color_map["end"])
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
+// Test LSCOLORS executable color
+func Test_LSCOLORS_executable(t *testing.T) {
+	setup_test_dir("LSCOLORS_executable")
+
+	_mkfile2("a", 0755, os.Getuid(), os.Getgid(), 0, time.Now())
+
+	os.Setenv("LSCOLORS", default_LSCOLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("%sa%s",
+		color_map["executable"],
+		color_map["end"])
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
 }
 
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
