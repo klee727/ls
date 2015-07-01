@@ -204,6 +204,12 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 		} else if l.permissions[0] == 'l' { // symlink
 			output_buffer.WriteString(color_map["symlink"])
 			applied_color = true
+		} else if l.permissions[3] == 's' { // setuid
+			output_buffer.WriteString(color_map["executable_suid"])
+			applied_color = true
+		} else if l.permissions[6] == 's' { // setgid
+			output_buffer.WriteString(color_map["executable_sgid"])
+			applied_color = true
 		} else if strings.Contains(l.permissions, "x") { // executable
 			output_buffer.WriteString(color_map["executable"])
 			applied_color = true
@@ -256,6 +262,27 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 			return current_listing, err
 		}
 		current_listing.linkname = link
+	} else if current_listing.permissions[0] == 'D' {
+		current_listing.permissions = current_listing.permissions[1:]
+	} else if current_listing.permissions[0:2] == "ug" {
+		current_listing.permissions =
+			strings.Replace(current_listing.permissions, "ug", "-", 1)
+		current_listing.permissions = fmt.Sprintf("%ss%ss%s",
+			current_listing.permissions[0:3],
+			current_listing.permissions[4:6],
+			current_listing.permissions[7:])
+	} else if current_listing.permissions[0] == 'u' {
+		current_listing.permissions =
+			strings.Replace(current_listing.permissions, "u", "-", 1)
+		current_listing.permissions = fmt.Sprintf("%ss%s",
+			current_listing.permissions[0:3],
+			current_listing.permissions[4:])
+	} else if current_listing.permissions[0] == 'g' {
+		current_listing.permissions =
+			strings.Replace(current_listing.permissions, "g", "-", 1)
+		current_listing.permissions = fmt.Sprintf("%ss%s",
+			current_listing.permissions[0:6],
+			current_listing.permissions[7:])
 	}
 
 	sys := fip.info.Sys()
@@ -950,7 +977,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 					color_map["executable_suid"] =
 						get_color_from_bsd_code(LSCOLORS[i : i+2])
 				} else if i == 16 {
-					color_map["executable_guid"] =
+					color_map["executable_sgid"] =
 						get_color_from_bsd_code(LSCOLORS[i : i+2])
 				} else if i == 18 {
 					color_map["directory_o+w_sticky"] =
