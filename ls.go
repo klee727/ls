@@ -198,7 +198,14 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 	if options.color {
 		applied_color := false
 
-		if l.permissions[0] == 'd' { // directory
+		if l.permissions[0] == 'd' &&
+			l.permissions[8] == 'w' && l.permissions[9] == 't' {
+			output_buffer.WriteString(color_map["directory_o+w_sticky"])
+			applied_color = true
+		} else if l.permissions[0] == 'd' && l.permissions[8] == 'w' {
+			output_buffer.WriteString(color_map["directory_o+w"])
+			applied_color = true
+		} else if l.permissions[0] == 'd' { // directory
 			output_buffer.WriteString(color_map["directory"])
 			applied_color = true
 		} else if l.permissions[0] == 'l' { // symlink
@@ -283,6 +290,11 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 		current_listing.permissions = fmt.Sprintf("%ss%s",
 			current_listing.permissions[0:6],
 			current_listing.permissions[7:])
+	} else if current_listing.permissions[0:2] == "dt" {
+		current_listing.permissions =
+			strings.Replace(current_listing.permissions, "dt", "d", 1)
+		current_listing.permissions = fmt.Sprintf("%st",
+			current_listing.permissions[0:len(current_listing.permissions)-1])
 	}
 
 	sys := fip.info.Sys()
