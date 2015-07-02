@@ -1000,7 +1000,51 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				}
 			}
 		} else if LS_COLORS != "" {
-			//fmt.Printf("LS_COLORS = %s\n", LS_COLORS)
+			// parse LS_COLORS
+			LS_COLORS_split := strings.Split(LS_COLORS, ":")
+			for _, i := range LS_COLORS_split {
+				if i == "" {
+					continue
+				}
+
+				i_split := strings.Split(i, "=")
+				color_code := fmt.Sprintf("\x1b[%sm", i_split[1])
+
+				if i_split[0] == "rs" {
+					color_map["end"] = color_code
+				} else if i_split[0] == "di" {
+					color_map["directory"] = color_code
+				} else if i_split[0] == "ln" {
+					color_map["symlink"] = color_code
+					// mh - MULTIHARDLINK
+				} else if i_split[0] == "pi" {
+					color_map["pipe"] = color_code
+				} else if i_split[0] == "so" {
+					color_map["socket"] = color_code
+					// do - DOOR
+				} else if i_split[0] == "bd" {
+					color_map["block"] = color_code
+				} else if i_split[0] == "cd" {
+					color_map["character"] = color_code
+					// or - ORPHAN (bad symlink)
+					// mi - non-existent file pointed to by a symbolic link
+					//      (visible when you type ls -l)
+				} else if i_split[0] == "su" {
+					color_map["executable_suid"] = color_code
+				} else if i_split[0] == "sg" {
+					color_map["executable_sgid"] = color_code
+					// ca - CAPABILITY?
+				} else if i_split[0] == "tw" {
+					color_map["directory_o+w_sticky"] = color_code
+				} else if i_split[0] == "ow" {
+					color_map["directory_o+w"] = color_code
+					// st - directory with sticky bit, but not o+w
+				} else if i_split[0] == "ex" {
+					color_map["executable"] = color_code
+				} else {
+					color_map[i_split[0]] = color_code
+				}
+			}
 		} else {
 			//fmt.Printf("using default colors\n")
 		}
