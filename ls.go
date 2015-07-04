@@ -196,6 +196,8 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 	if options.color {
 		applied_color := false
 
+		num_hardlinks, _ := strconv.Atoi(l.num_hard_links)
+
 		// "file.name.txt" -> "*.txt"
 		name_split := strings.Split(l.name, ".")
 		extension_str := ""
@@ -215,6 +217,9 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 			applied_color = true
 		} else if l.permissions[0] == 'd' { // directory
 			output_buffer.WriteString(color_map["directory"])
+			applied_color = true
+		} else if num_hardlinks > 1 {
+			output_buffer.WriteString(color_map["multi_hardlink"])
 			applied_color = true
 		} else if l.permissions[0] == 'l' { // symlink
 			output_buffer.WriteString(color_map["symlink"])
@@ -1026,7 +1031,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 					color_map["directory"] = color_code
 				} else if i_split[0] == "ln" {
 					color_map["symlink"] = color_code
-					// mh - MULTIHARDLINK
+				} else if i_split[0] == "mh" {
+					color_map["multi_hardlink"] = color_code
 				} else if i_split[0] == "pi" {
 					color_map["pipe"] = color_code
 				} else if i_split[0] == "so" {
