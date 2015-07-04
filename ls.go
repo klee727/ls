@@ -196,7 +196,17 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 	if options.color {
 		applied_color := false
 
-		if l.permissions[0] == 'd' &&
+		// "file.name.txt" -> "*.txt"
+		name_split := strings.Split(l.name, ".")
+		extension_str := ""
+		if len(name_split) > 1 {
+			extension_str = fmt.Sprintf("*.%s", name_split[len(name_split)-1])
+		}
+
+		if extension_str != "" && color_map[extension_str] != "" {
+			output_buffer.WriteString(color_map[extension_str])
+			applied_color = true
+		} else if l.permissions[0] == 'd' &&
 			l.permissions[8] == 'w' && l.permissions[9] == 't' {
 			output_buffer.WriteString(color_map["directory_o+w_sticky"])
 			applied_color = true
