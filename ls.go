@@ -72,7 +72,8 @@ type Listing struct {
 	day            string
 	time           string
 	name           string
-	linkname       string
+	link_name      string
+	link_orphan    bool
 	is_socket      bool
 	is_pipe        bool
 	is_block       bool
@@ -221,6 +222,9 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 		} else if num_hardlinks > 1 {
 			output_buffer.WriteString(color_map["multi_hardlink"])
 			applied_color = true
+		} else if l.permissions[0] == 'l' && l.link_orphan { // orphan link
+			output_buffer.WriteString(color_map["link_orphan"])
+			applied_color = true
 		} else if l.permissions[0] == 'l' { // symlink
 			output_buffer.WriteString(color_map["symlink"])
 			applied_color = true
@@ -256,7 +260,14 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 	}
 
 	if l.permissions[0] == 'l' && options.long {
-		output_buffer.WriteString(fmt.Sprintf(" -> %s", l.linkname))
+		if l.link_orphan {
+			output_buffer.WriteString(fmt.Sprintf(" -> %s%s%s",
+				color_map["link_orphan_target"],
+				l.link_name,
+				color_map["end"]))
+		} else {
+			output_buffer.WriteString(fmt.Sprintf(" -> %s", l.link_name))
+		}
 	}
 }
 
@@ -281,7 +292,23 @@ func create_listing(dirname string, fip FileInfoPath) (Listing, error) {
 		if err != nil {
 			return current_listing, err
 		}
-		current_listing.linkname = link
+		current_listing.link_name = link
+
+		// check to see if the symlink target exists
+		var _link_pathstr string
+		if dirname == "" {
+			_link_pathstr = fmt.Sprintf("%s", link)
+		} else {
+			_link_pathstr = fmt.Sprintf("%s/%s", dirname, link)
+		}
+		_, err = os.Open(_link_pathstr)
+		if err != nil {
+			if os.IsNotExist(err) {
+				current_listing.link_orphan = true
+			} else {
+				return current_listing, err
+			}
+		}
 	} else if current_listing.permissions[0] == 'D' {
 		current_listing.permissions = current_listing.permissions[1:]
 	} else if current_listing.permissions[0:2] == "ug" {
@@ -1042,9 +1069,10 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 					color_map["block"] = color_code
 				} else if i_split[0] == "cd" {
 					color_map["character"] = color_code
-					// or - ORPHAN (bad symlink)
-					// mi - non-existent file pointed to by a symbolic link
-					//      (visible when you type ls -l)
+				} else if i_split[0] == "or" {
+					color_map["link_orphan"] = color_code
+				} else if i_split[0] == "mi" {
+					color_map["link_orphan_target"] = color_code
 				} else if i_split[0] == "su" {
 					color_map["executable_suid"] = color_code
 				} else if i_split[0] == "sg" {
