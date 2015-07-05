@@ -909,7 +909,7 @@ func Test_t_FilesAndDirs_FilesAndDirs(t *testing.T) {
 		time_now.Add(-2*time.Second))
 
 	var output_buffer bytes.Buffer
-	args := []string{"-t", "a", "b", "dir0", "dir1", "dir2"}
+	args := []string{"-t", "a", "b", "dir0", "dir1", "dir2", "--nocolor"}
 	err := ls(&output_buffer, args, tw)
 	output := clean_output_buffer(output_buffer)
 

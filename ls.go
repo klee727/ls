@@ -1180,7 +1180,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		}
 
 		for _, d := range list_dirs {
-			output_buffer.WriteString(d.name + ":\n")
+			write_listing_name(output_buffer, d)
+			output_buffer.WriteString(":\n")
 
 			listings, err := list_files_in_dir(d)
 			if err != nil {
