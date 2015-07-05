@@ -1304,6 +1304,24 @@ func Test_LS_COLORS_Dir(t *testing.T) {
 	check_error_nil(t, err)
 }
 
+// Test directory color with neither LSCOLORS or LS_COLORS defined--should
+// default to the LSCOLORS specification
+func Test_blankCOLOR_Dir(t *testing.T) {
+	setup_test_dir("blankCOLOR_Dir")
+
+	_mkdir("test_dir")
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("\x1b[0;34mtest_dir\x1b[0m")
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
 // Test LSCOLORS world-writeable directory color
 func Test_LSCOLORS_ow_Dir(t *testing.T) {
 	setup_test_dir("LSCOLORS_ow_Dir")

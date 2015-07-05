@@ -190,6 +190,47 @@ func get_color_from_bsd_code(code string) string {
 	return color_bytes.String()
 }
 
+// Given an LSCOLORS string, fill in the appropriate keys and values of the
+// global color_map.
+func parse_LSCOLORS(LSCOLORS string) {
+	for i := 0; i < len(LSCOLORS); i += 2 {
+		if i == 0 {
+			color_map["directory"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 2 {
+			color_map["symlink"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 4 {
+			color_map["socket"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 6 {
+			color_map["pipe"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 8 {
+			color_map["executable"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 10 {
+			color_map["block"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 12 {
+			color_map["character"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 14 {
+			color_map["executable_suid"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 16 {
+			color_map["executable_sgid"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 18 {
+			color_map["directory_o+w_sticky"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		} else if i == 20 {
+			color_map["directory_o+w"] =
+				get_color_from_bsd_code(LSCOLORS[i : i+2])
+		}
+	}
+}
+
 // Write the given Listing's name to the output buffer, with the appropriate
 // formatting based on the current options.
 func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
@@ -1007,43 +1048,7 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		LSCOLORS := os.Getenv("LSCOLORS")
 
 		if LSCOLORS != "" {
-			// parse LSCOLORS
-			for i := 0; i < len(LSCOLORS); i += 2 {
-				if i == 0 {
-					color_map["directory"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 2 {
-					color_map["symlink"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 4 {
-					color_map["socket"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 6 {
-					color_map["pipe"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 8 {
-					color_map["executable"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 10 {
-					color_map["block"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 12 {
-					color_map["character"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 14 {
-					color_map["executable_suid"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 16 {
-					color_map["executable_sgid"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 18 {
-					color_map["directory_o+w_sticky"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				} else if i == 20 {
-					color_map["directory_o+w"] =
-						get_color_from_bsd_code(LSCOLORS[i : i+2])
-				}
-			}
+			parse_LSCOLORS(LSCOLORS)
 		} else if LS_COLORS != "" {
 			// parse LS_COLORS
 			LS_COLORS_split := strings.Split(LS_COLORS, ":")
@@ -1095,7 +1100,8 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 				// do - DOOR -- not supported!
 			}
 		} else {
-			//fmt.Printf("using default colors\n")
+			// use the default LSCOLORS
+			parse_LSCOLORS("exfxcxdxbxegedabagacad")
 		}
 	}
 
