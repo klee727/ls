@@ -213,13 +213,16 @@ func write_listing_name(output_buffer *bytes.Buffer, l Listing) {
 			l.permissions[8] == 'w' && l.permissions[9] == 't' {
 			output_buffer.WriteString(color_map["directory_o+w_sticky"])
 			applied_color = true
+		} else if l.permissions[0] == 'd' && l.permissions[9] == 't' {
+			output_buffer.WriteString(color_map["directory_sticky"])
+			applied_color = true
 		} else if l.permissions[0] == 'd' && l.permissions[8] == 'w' {
 			output_buffer.WriteString(color_map["directory_o+w"])
 			applied_color = true
 		} else if l.permissions[0] == 'd' { // directory
 			output_buffer.WriteString(color_map["directory"])
 			applied_color = true
-		} else if num_hardlinks > 1 {
+		} else if num_hardlinks > 1 { // multiple hardlinks
 			output_buffer.WriteString(color_map["multi_hardlink"])
 			applied_color = true
 		} else if l.permissions[0] == 'l' && l.link_orphan { // orphan link
@@ -1064,7 +1067,6 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 					color_map["pipe"] = color_code
 				} else if i_split[0] == "so" {
 					color_map["socket"] = color_code
-					// do - DOOR
 				} else if i_split[0] == "bd" {
 					color_map["block"] = color_code
 				} else if i_split[0] == "cd" {
@@ -1077,17 +1079,20 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 					color_map["executable_suid"] = color_code
 				} else if i_split[0] == "sg" {
 					color_map["executable_sgid"] = color_code
-					// ca - CAPABILITY?
 				} else if i_split[0] == "tw" {
 					color_map["directory_o+w_sticky"] = color_code
 				} else if i_split[0] == "ow" {
 					color_map["directory_o+w"] = color_code
-					// st - directory with sticky bit, but not o+w
+				} else if i_split[0] == "st" {
+					color_map["directory_sticky"] = color_code
 				} else if i_split[0] == "ex" {
 					color_map["executable"] = color_code
 				} else {
 					color_map[i_split[0]] = color_code
 				}
+
+				// ca - CAPABILITY? -- not supported!
+				// do - DOOR -- not supported!
 			}
 		} else {
 			//fmt.Printf("using default colors\n")

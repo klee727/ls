@@ -1519,4 +1519,27 @@ func Test_LS_COLORS_orphan_link(t *testing.T) {
 	check_error_nil(t, ls_err)
 }
 
+// Test LS_COLORS with a non-world-writeable directory with the sticky bit set
+func Test_LS_COLORS_directory_sticky(t *testing.T) {
+	setup_test_dir("LS_COLORS_directory_sticky")
+
+	_mkdir2("test_dir",
+		0755|os.ModeSticky,
+		os.Getuid(),
+		os.Getuid(),
+		time.Now())
+
+	os.Setenv("LS_COLORS", default_LS_COLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	expected := fmt.Sprintf("\x1b[37;44mtest_dir\x1b[0m")
+
+	check_output(t, output, expected)
+	check_error_nil(t, err)
+}
+
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
