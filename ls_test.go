@@ -44,8 +44,8 @@ func _mkdir(path string) {
 	}
 }
 
-// recursively remove the directory at the given path
-func _rmdir(path string) {
+// recursively remove the file or directory at the given path
+func _rm(path string) {
 	err := os.RemoveAll(path)
 	if err != nil {
 		fmt.Printf("error: os.RemoveAll(%s)\n", path)
@@ -237,7 +237,7 @@ func TestMain(m *testing.M) {
 	//
 	// teardown
 	//
-	_rmdir(test_root)
+	_rm(test_root)
 
 	os.Exit(result)
 }
@@ -1448,7 +1448,7 @@ func Test_LSCOLORS_executable(t *testing.T) {
 }
 
 // Test LS_COLORS executable color
-func test_LS_COLORS_executable(t *testing.T) {
+func Test_LS_COLORS_executable(t *testing.T) {
 	setup_test_dir("LS_COLORS_executable")
 
 	_mkfile2("a", 0755, os.Getuid(), os.Getgid(), 0, time.Now())
@@ -1464,6 +1464,59 @@ func test_LS_COLORS_executable(t *testing.T) {
 
 	check_output(t, output, expected)
 	check_error_nil(t, err)
+}
+
+// Test LS_COLORS with an orphan link
+func Test_LS_COLORS_orphan_link(t *testing.T) {
+	setup_test_dir("LS_COLORS_orphan_link")
+
+	time_now := time.Now()
+
+	_mkfile2("a", 0600, os.Getuid(), os.Getgid(), 8, time_now)
+	_mklink("a", "b")
+	_rm("a")
+
+	os.Setenv("LS_COLORS", default_LS_COLORS)
+
+	var output_buffer bytes.Buffer
+	args := []string{"-l"}
+	ls_err := ls(&output_buffer, args, tw)
+
+	output := clean_output_buffer(output_buffer)
+	// remove the permissions string from the output
+	output_noperms := strings.Join(strings.Split(output, " ")[1:], " ")
+
+	var owner string
+	owner_lookup, err := user.LookupId(fmt.Sprintf("%d", os.Getuid()))
+	if err != nil {
+		owner = user_map[int(os.Getuid())]
+	} else {
+		owner = owner_lookup.Username
+	}
+
+	group := group_map[os.Getgid()]
+
+	// link info
+	link_info, err := os.Lstat("b")
+	if err != nil {
+		t.Fatalf("error checking the symlink")
+	}
+
+	expected := fmt.Sprintf("1 %s %s %d %s %02d %02d:%02d %sb%s -> %sa%s",
+		owner,
+		group,
+		link_info.Size(),
+		time_now.Month().String()[0:3],
+		time_now.Day(),
+		time_now.Hour(),
+		time_now.Minute(),
+		"\x1b[40;31;01m",
+		"\x1b[0m",
+		"\x1b[01;05;37;41m",
+		"\x1b[0m")
+
+	check_output(t, output_noperms, expected)
+	check_error_nil(t, ls_err)
 }
 
 // vim: tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab tw=80
