@@ -1248,9 +1248,51 @@ func main() {
 		os.Exit(1)
 	}
 
+	var argument_list []string
+
+	// If stdin is not a terminal, that indicates that arguments are being sent
+	// via a pipe (e.g.  echo "something" | ls).  Need to include these with the
+	// other program arguments.
+	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+		stdin_bytes, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Printf("error reading from stdin\n")
+			os.Exit(1)
+		}
+
+		stdin_str := string(stdin_bytes)
+
+		// remove leading/trailing whitespace
+		stdin_str = strings.TrimSpace(stdin_str)
+
+		// remove tab characters
+		stdin_str = strings.Replace(stdin_str, "\t", "", -1)
+
+		// remove internal excess spaces
+		var removed_space bool
+		for {
+			removed_space = false
+			if strings.Contains(stdin_str, "  ") {
+				stdin_str = strings.Replace(stdin_str, "  ", " ", -1)
+				removed_space = true
+			}
+			if !removed_space {
+				break
+			}
+		}
+
+		stdin_str_slice := strings.Split(stdin_str, " ")
+
+		// create a new argument list with the regular arguments followed by the
+		// stdin arguments
+		argument_list = append(os.Args, stdin_str_slice...)
+	} else {
+		argument_list = os.Args
+	}
+
 	var output_buffer bytes.Buffer
 
-	err = ls(&output_buffer, os.Args[1:], terminal_width)
+	err = ls(&output_buffer, argument_list[1:], terminal_width)
 	if err != nil {
 		fmt.Printf("ls: %v\n", err)
 		os.Exit(1)
