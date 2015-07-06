@@ -343,7 +343,7 @@ func Test_None_File_Empty(t *testing.T) {
 	output := clean_output_buffer(output_buffer)
 
 	expected_out := ""
-	expected_err := "cannot access a: No such file or directory"
+	expected_err := "cannot access a: no such file or directory"
 
 	check_output(t, output, expected_out)
 	check_error(t, err, expected_err)
@@ -387,6 +387,28 @@ func Test_None_Dir_DotFilesInDir(t *testing.T) {
 
 	check_output(t, output, expected)
 	check_error_nil(t, err)
+}
+
+func Test_None_Dir_DirPerms(t *testing.T) {
+	setup_test_dir("None_Dir_DirPerms")
+
+	//_mkdir2("test_dir", 0755, os.Getuid(), os.Getuid(), time.Now())
+	_mkdir("test_dir")
+	_mkfile("test_dir/a")
+	_modify_path("test_dir", 0000, os.Getuid(), os.Getuid(), time.Now())
+
+	var output_buffer bytes.Buffer
+	args := []string{"test_dir/a"}
+	err := ls(&output_buffer, args, tw)
+	output := clean_output_buffer(output_buffer)
+
+	// reset test_dir permissions so the directory can be deleted
+	_modify_path("test_dir", 0755, os.Getuid(), os.Getuid(), time.Now())
+
+	expected := ""
+
+	check_output(t, output, expected)
+	check_error(t, err, "open test_dir/a: permission denied")
 }
 
 // Test running 'ls -a' in an empty directory

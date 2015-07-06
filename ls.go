@@ -1132,7 +1132,9 @@ func ls(output_buffer *bytes.Buffer, args []string, width int) error {
 		info, err := os.Lstat(f)
 
 		if err != nil && os.IsNotExist(err) {
-			return fmt.Errorf("cannot access %s: No such file or directory", f)
+			return fmt.Errorf("cannot access %s: no such file or directory", f)
+		} else if err != nil && os.IsPermission(err) {
+			return fmt.Errorf("open %s: permission denied", f)
 		} else if err != nil {
 			return err
 		}
